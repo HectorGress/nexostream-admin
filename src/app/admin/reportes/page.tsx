@@ -1,7 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { auth } from '@/lib/firebase'
+import { onAuthStateChanged } from 'firebase/auth'
 import { createClient } from '@/lib/supabase'
+import type { Tone } from '@/lib/cuentas'
 import { Sun, Moon, Check, ArrowLeft, RefreshCw, Inbox, LifeBuoy, Clock, CheckCircle2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import Link from 'next/link'
@@ -23,8 +27,6 @@ const getDescripcionReporte = (rep: any) => {
   if (desc.includes('\n')) return desc.split('\n').slice(1).join('\n')
   return desc
 }
-
-type Tone = 'success' | 'warning' | 'danger' | 'info' | 'neutral'
 
 const toneClasses = (dark: boolean, tone: Tone) => {
   const map: Record<Tone, string> = {
@@ -70,16 +72,41 @@ export default function AdminReportesPage() {
   const [reportes, setReportes] = useState<any[]>([])
   const [soluciones, setSoluciones] = useState<{ [key: number]: string }>({})
   const [cargando, setCargando] = useState(true)
+  const [autorizado, setAutorizado] = useState(false)
 
+  const router = useRouter()
   const supabase = createClient()
 
+  // Solo administradores: se valida sesión y rol antes de mostrar o cargar nada
   useEffect(() => {
-    cargarReportes()
-  }, [])
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      if (!u) {
+        router.push('/login')
+        return
+      }
+
+      const { data: perfilAdmin } = await supabase
+        .from('profiles')
+        .select('rol')
+        .eq('id', u.uid)
+        .maybeSingle()
+
+      if (perfilAdmin?.rol !== 'admin') {
+        router.push('/cliente/dashboard')
+        return
+      }
+
+      setAutorizado(true)
+      cargarReportes()
+    })
+    return () => unsub()
+  }, [router])
 
   // Actualización en vivo: cuando llega o cambia un reporte, la lista se recarga sola.
   // Respaldo: cada 30 s y al volver a la pestaña.
   useEffect(() => {
+    if (!autorizado) return
+
     let timer: ReturnType<typeof setTimeout> | null = null
     const refrescar = () => {
       if (timer) clearTimeout(timer)
@@ -106,7 +133,7 @@ export default function AdminReportesPage() {
       document.removeEventListener('visibilitychange', alVolver)
       supabase.removeChannel(channel)
     }
-  }, [])
+  }, [autorizado])
 
   const cargarReportes = async () => {
     setCargando(true)
@@ -119,10 +146,10 @@ export default function AdminReportesPage() {
   }
 
   const responderReporte = async (id: number) => {
-    const solucionTexto = soluciones[id]
+    const solucionTexto = (soluciones[id] || '').trim()
     if (!solucionTexto) return
 
-    await supabase
+    const { error } = await supabase
       .from('reportes')
       .update({
         solucion: solucionTexto,
@@ -131,6 +158,11 @@ export default function AdminReportesPage() {
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
+
+    if (error) {
+      alert(`❌ No se pudo responder el reporte: ${error.message}`)
+      return
+    }
 
     setSoluciones({ ...soluciones, [id]: '' })
     cargarReportes()
@@ -154,6 +186,21 @@ export default function AdminReportesPage() {
   const total = reportes.length
   const atendidos = reportes.filter(r => r.atendido).length
   const pendientes = total - atendidos
+
+  // Mientras se valida la sesión y el rol
+  if (!autorizado) {
+    return (
+      <div className={`min-h-screen p-4 md:p-8 ${ui.page}`}>
+        <div className="max-w-5xl mx-auto space-y-6">
+          <Skeleton dark={darkMode} className="h-10 w-72" />
+          <div className="grid grid-cols-3 gap-4">
+            {[0, 1, 2].map((i) => <Skeleton key={i} dark={darkMode} className="h-24" />)}
+          </div>
+          {[0, 1].map((i) => <Skeleton key={i} dark={darkMode} className="h-44 w-full" />)}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={`min-h-screen transition-colors duration-200 p-4 md:p-8 ${ui.page}`}>

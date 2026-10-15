@@ -8,6 +8,7 @@ import {
   createUserWithEmailAndPassword 
 } from 'firebase/auth'
 import { createClient } from '@/lib/supabase'
+import { validarCorreo } from '@/lib/cuentas'
 import { ShieldCheck, Mail, Lock, LogIn, UserPlus, Sun, Moon, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
@@ -25,12 +26,24 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMsg('')
+
+    // Validaciones antes de llamar a Firebase
+    const correo = email.trim().toLowerCase()
+    if (!validarCorreo(correo)) {
+      setErrorMsg('Escribe un correo electrónico válido.')
+      return
+    }
+    if (password.length < 6) {
+      setErrorMsg('La contraseña debe tener al menos 6 caracteres.')
+      return
+    }
+
     setLoading(true)
 
     try {
       if (isRegister) {
         // 1. Crear el usuario en Firebase Authentication (Evita el rate limit de SMTP)
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+        const userCredential = await createUserWithEmailAndPassword(auth, correo, password)
         const user = userCredential.user
 
         // 2. Mapear el perfil en la tabla 'profiles' de Supabase
@@ -41,6 +54,7 @@ export default function LoginPage() {
           ])
 
         if (profileError) {
+          // No bloquea el registro: el panel del cliente crea el perfil si falta
           console.error("Error guardando el perfil en Supabase:", profileError)
         }
 
@@ -48,7 +62,7 @@ export default function LoginPage() {
         router.push('/cliente/dashboard')
       } else {
         // 1. Autenticar con Firebase Auth
-        const userCredential = await signInWithEmailAndPassword(auth, email, password)
+        const userCredential = await signInWithEmailAndPassword(auth, correo, password)
         const user = userCredential.user
 
         // 2. Obtener el rol del usuario desde la tabla 'profiles' de Supabase
@@ -56,7 +70,7 @@ export default function LoginPage() {
           .from('profiles')
           .select('rol')
           .eq('id', user.uid)
-          .single()
+          .maybeSingle()
 
         if (fetchError) {
           console.error("Error consultando el rol:", fetchError)
@@ -80,6 +94,14 @@ export default function LoginPage() {
         setErrorMsg('Usuario o contraseña incorrectos.')
       } else if (error.code === 'auth/weak-password') {
         setErrorMsg('La contraseña debe tener al menos 6 caracteres.')
+      } else if (error.code === 'auth/invalid-email') {
+        setErrorMsg('Escribe un correo electrónico válido.')
+      } else if (error.code === 'auth/too-many-requests') {
+        setErrorMsg('Demasiados intentos. Espera unos minutos e inténtalo de nuevo.')
+      } else if (error.code === 'auth/network-request-failed') {
+        setErrorMsg('Sin conexión. Revisa tu internet e inténtalo de nuevo.')
+      } else if (error.code === 'auth/user-disabled') {
+        setErrorMsg('Esta cuenta está deshabilitada. Contacta al administrador.')
       } else {
         setErrorMsg('Ocurrió un error. Intenta nuevamente.')
       }
@@ -153,7 +175,7 @@ export default function LoginPage() {
         )}
 
         {/* Formulario */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div>
             <label htmlFor="email" className={`block text-sm font-medium mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
               Correo electrónico
@@ -200,6 +222,9 @@ export default function LoginPage() {
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+            {isRegister && (
+              <p className={`text-xs mt-1.5 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Mínimo 6 caracteres.</p>
+            )}
           </div>
 
           <button
