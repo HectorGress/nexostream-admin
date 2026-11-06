@@ -16,9 +16,15 @@ import type { FilaReporte, SeccionReporte } from '@/lib/reporteVencimientos'
 import {
   Sun, Moon, LogOut, Users, Server, Tag, LifeBuoy, Search, Plus, Copy, Check,
   Pencil, Trash2, Clock, Inbox, X, RefreshCw, ExternalLink, SearchX, Loader2,
-  Send, FileText, FileImage, Unlink, Globe, UserCheck
+  Send, FileText, FileImage, Unlink, Globe, UserCheck,
+  UserMinus, ChevronDown, Dices, Wallet, History
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import RenovarModal from '@/components/RenovarModal'
+import {
+  perfilesPorDefecto, generarPin, siguientePerfilLibre, diasEntre,
+  registrarBitacora, registrarPago
+} from '@/lib/extras'
 
 /* ───────────────────────── Helpers visuales ───────────────────────── */
 
@@ -140,6 +146,13 @@ export default function AdminDashboard() {
   const [repPorVencer, setRepPorVencer] = useState(true)
   const [repOrigen, setRepOrigen] = useState<'ambas' | 'clientes' | 'madres'>('ambas')
   const [generando, setGenerando] = useState<'pdf' | 'png' | null>(null)
+
+  // Renovar, filtro por estado, cuentas madre plegables y pago inicial
+  const [renovarItem, setRenovarItem] = useState<any>(null)
+  const [filtroEstado, setFiltroEstado] = useState('todos')
+  const [madreAbierta, setMadreAbierta] = useState<any>(null)
+  const [ocultarLlenas, setOcultarLlenas] = useState(false)
+  const [pagoInicial, setPagoInicial] = useState(true)
 
   const router = useRouter()
   const supabase = createClient()
@@ -277,6 +290,7 @@ export default function AdminDashboard() {
 
     let error: any = null
     let ejecutar: (() => Promise<{ error: any }>) | null = null
+    const nuevoCliente: { id: number | null } = { id: null }
     
     if (tab === 'clientes') {
       const correoCta = (formData.correo_cuenta || '').trim()
@@ -326,9 +340,26 @@ export default function AdminDashboard() {
       if (formData.correo) payload.correo = formData.correo
       if (formData.contrasena) payload.contrasena = formData.contrasena
 
-      ejecutar = async () => editingItem?.id
-        ? supabase.from('cuentas_clientes').update(payload).eq('id', editingItem.id)
-        : supabase.from('cuentas_clientes').insert([payload])
+      // Cupo: la cuenta madre elegida debe tener perfiles libres
+      if (payload.cuenta_madre_id && payload.cuenta_madre_id !== editingItem?.cuenta_madre_id) {
+        const madreSel = cuentasMadre.find((m) => m.id === payload.cuenta_madre_id)
+        const limite = madreSel?.max_perfiles || perfilesPorDefecto(madreSel?.servicio)
+        const ocupados = cuentasClientes.filter(
+          (c) => c.cuenta_madre_id === payload.cuenta_madre_id && c.id !== editingItem?.id
+        ).length
+        if (madreSel && ocupados >= limite) {
+          return alertar(`Esa cuenta madre ya tiene ${ocupados} de ${limite} perfiles ocupados. Elige otra o libera un perfil.`)
+        }
+      }
+
+      ejecutar = async () => {
+        if (editingItem?.id) {
+          return supabase.from('cuentas_clientes').update(payload).eq('id', editingItem.id)
+        }
+        const r = await supabase.from('cuentas_clientes').insert([payload]).select('id').single()
+        nuevoCliente.id = r.data?.id ?? null
+        return { error: r.error }
+      }
     } else if (tab === 'madres') {
       const correo = (formData.correo || '').trim()
       const pass = (formData.contrasena || '').trim()
@@ -362,6 +393,7 @@ export default function AdminDashboard() {
         panel_id: (formData.panel_id || '').trim() || null,
       }
       if (formData.codigo_panel) payload.codigo_panel = formData.codigo_panel
+      payload.max_perfiles = Number(formData.max_perfiles) || perfilesPorDefecto(servicio)
 
       ejecutar = async () => editingItem?.id
         ? supabase.from('cuentas_madre').update(payload).eq('id', editingItem.id)
@@ -399,6 +431,30 @@ export default function AdminDashboard() {
       return
     }
 
+    // Bitácora y pago inicial
+    const editando = !!editingItem?.id
+    if (tab === 'clientes') {
+      await registrarBitacora(
+        editando ? 'editar' : 'crear',
+        'cliente',
+        `${formData.nombre_completo} (${formData.servicio}${formData.perfil_asignado ? ', ' + formData.perfil_asignado : ''})`
+      )
+      const precio = Number(formData.precio_suscripcion)
+      if (!editando && pagoInicial && nuevoCliente.id && precio > 0 && formData.fecha_vencimiento) {
+        await registrarPago({
+          clienteId: nuevoCliente.id,
+          nombre: formData.nombre_completo,
+          servicio: formData.servicio,
+          monto: precio,
+          dias: diasEntre(formData.fecha_adquisicion || hoyISO(), formData.fecha_vencimiento),
+          nuevoVencimiento: formData.fecha_vencimiento,
+          nota: 'Pago inicial',
+        })
+      }
+    } else if (tab === 'madres') {
+      await registrarBitacora(editando ? 'editar' : 'crear', 'cuenta_madre', `${formData.servicio} · ${formData.correo}`)
+    }
+
     setIsModalOpen(false)
     setEditingItem(null)
     setFormData({})
@@ -408,10 +464,53 @@ export default function AdminDashboard() {
 
   const handleDelete = async (table: string, id: any) => {
     if (confirm('¿Deseas eliminar este registro?')) {
+      const previo: any = table === 'cuentas_clientes'
+        ? cuentasClientes.find((c) => c.id === id)
+        : table === 'cuentas_madre' ? cuentasMadre.find((m) => m.id === id) : null
       const { error } = await supabase.from(table).delete().eq('id', id)
       if (error) alert(`❌ Error al eliminar: ${error.message}`)
+      else if (previo) {
+        await registrarBitacora(
+          'borrar',
+          table === 'cuentas_madre' ? 'cuenta_madre' : 'cliente',
+          `${previo.nombre_completo || previo.proveedor || 'Sin nombre'} (${previo.servicio || ''}) ${previo.correo_cuenta || previo.correo || ''}`
+        )
+      }
       await loadAllData()
     }
+  }
+
+  const handleLiberar = async (item: any) => {
+    if (!confirm(
+      `¿Liberar el perfil ${item.perfil_asignado || ''} de ${item.nombre_completo || 'este cliente'}?\n\n` +
+      `Se libera el espacio en la cuenta madre y la cuenta se quita del panel del cliente. ` +
+      `El registro se queda para que lo renueves o lo borres.`
+    )) return
+
+    const { error } = await supabase
+      .from('cuentas_clientes')
+      .update({
+        cuenta_madre_id: null,
+        usuario_id: null,
+        entregado_at: null,
+        panel_url: null,
+        panel_usuario: null,
+        panel_id: null,
+        perfil_asignado: null,
+        pin_perfil: null,
+      })
+      .eq('id', item.id)
+
+    if (error) { alert(`❌ No se pudo liberar: ${error.message}`); return }
+
+    const madre = cuentasMadre.find((m) => String(m.id) === String(item.cuenta_madre_id))
+    await registrarBitacora(
+      'liberar',
+      'cliente',
+      `${item.nombre_completo || 'Cliente'} liberó ${item.perfil_asignado || 'su perfil'} de ${madre?.correo || 'su cuenta madre'} (${item.servicio || ''})`
+    )
+    await loadAllData()
+    mostrarToast('ok', `Perfil liberado. Ya hay un espacio libre en ${madre?.correo || 'la cuenta madre'}.`)
   }
 
   const handleUpdateReporteStatus = async (id: any, nuevoEstatus: string) => {
@@ -640,8 +739,20 @@ export default function AdminDashboard() {
   const clientesVencidas = cuentasClientes.filter(c => getSemaforoStatus(c.fecha_vencimiento).label === 'Vencida').length
   const clientesEnviadas = cuentasClientes.filter(c => !!c.usuario_id).length
 
-  const clientesVisibles = ordenarPorVencimiento(applyFilters(cuentasClientes))
-  const madresVisibles = ordenarPorVencimiento(applyFilters(cuentasMadre))
+  // Perfiles ocupados por cuenta madre (cupo y barra de ocupación)
+  const ocupadosPorMadre: Record<string, number> = {}
+  cuentasClientes.forEach((c) => {
+    if (c.cuenta_madre_id) ocupadosPorMadre[c.cuenta_madre_id] = (ocupadosPorMadre[c.cuenta_madre_id] || 0) + 1
+  })
+
+  const clientesVisibles = ordenarPorVencimiento(applyFilters(cuentasClientes)).filter((c: any) => {
+    if (filtroEstado === 'todos') return true
+    if (filtroEstado === 'sin_enviar') return !c.usuario_id
+    return getSemaforoStatus(c.fecha_vencimiento).label === filtroEstado
+  })
+  const madresVisibles = ordenarPorVencimiento(applyFilters(cuentasMadre)).filter(
+    (m: any) => !ocultarLlenas || (ocupadosPorMadre[m.id] || 0) < (m.max_perfiles || perfilesPorDefecto(m.servicio))
+  )
   const preciosVisibles = applyFilters(servicios)
   const reportesVisibles = applyFilters(reportes)
 
@@ -729,6 +840,12 @@ export default function AdminDashboard() {
             </button>
             <Link href="/admin/reportes" className={ui.btnGhost}>
               <ExternalLink size={16} /> <span>Vista de reportes</span>
+            </Link>
+            <Link href="/admin/pagos" className={ui.btnGhost}>
+              <Wallet size={16} /> <span>Pagos</span>
+            </Link>
+            <Link href="/admin/bitacora" className={ui.btnGhost}>
+              <History size={16} /> <span>Bitácora</span>
             </Link>
             <button onClick={() => setDarkMode(!darkMode)} className={ui.btnGhost}>
               {darkMode ? <Sun size={16} /> : <Moon size={16} />}
@@ -825,6 +942,38 @@ export default function AdminDashboard() {
           )}
         </div>
 
+        {tab === 'clientes' && (
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              ['todos', 'Todos'],
+              ['Vencida', 'Vencidas'],
+              ['Por Vencer', 'Por vencer'],
+              ['Estable', 'Estables'],
+              ['sin_enviar', 'Sin enviar'],
+            ].map(([valor, texto]) => (
+              <button
+                key={valor}
+                type="button"
+                onClick={() => setFiltroEstado(valor)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold border transition ${
+                  filtroEstado === valor
+                    ? 'bg-indigo-600 border-indigo-600 text-white'
+                    : (darkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50')
+                }`}
+              >
+                {texto}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {tab === 'madres' && (
+          <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" checked={ocultarLlenas} onChange={(e) => setOcultarLlenas(e.target.checked)} className="h-4 w-4 accent-indigo-600" />
+            Ocultar cuentas madre llenas
+          </label>
+        )}
+
         {/* TABLA: Cuentas Clientes */}
         {tab === 'clientes' && (
           <div className={`border rounded-2xl overflow-hidden ${ui.card}`}>
@@ -900,6 +1049,25 @@ export default function AdminDashboard() {
                                 <Send size={14} /> {item.usuario_id ? 'Reenviar' : 'Enviar'}
                               </button>
                               <button
+                                onClick={() => setRenovarItem(item)}
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                                  darkMode ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20' : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                                }`}
+                                title="Renovar: suma días y registra el pago"
+                              >
+                                <RefreshCw size={14} /> Renovar
+                              </button>
+                              {semaforo.label === 'Vencida' && item.cuenta_madre_id && (
+                                <button
+                                  onClick={() => handleLiberar(item)}
+                                  className={`p-2 rounded-lg transition ${darkMode ? 'text-amber-300 hover:bg-amber-500/10' : 'text-amber-600 hover:bg-amber-50'}`}
+                                  title="Liberar perfil"
+                                  aria-label="Liberar perfil"
+                                >
+                                  <UserMinus size={16} />
+                                </button>
+                              )}
+                              <button
                                 onClick={() => handleCopiarDatosCliente(item)}
                                 className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
                                   copiedId === item.id
@@ -948,6 +1116,7 @@ export default function AdminDashboard() {
                       <th className="px-4 py-3">Código panel</th>
                       <th className="px-4 py-3">Servicio</th>
                       <th className="px-4 py-3">Correo y contraseña</th>
+                      <th className="px-4 py-3">Perfiles</th>
                       <th className="px-4 py-3">Fecha adquisición</th>
                       <th className="px-4 py-3">Fecha vencimiento</th>
                       <th className="px-4 py-3">Estado</th>
@@ -969,6 +1138,48 @@ export default function AdminDashboard() {
                             <span className={`font-semibold ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>{item.correo || '-'}</span>
                             <br />
                             <span className={ui.muted}>Pass: {item.contrasena || 'S/N'}</span>
+                          </td>
+                          <td className="px-4 py-3.5 min-w-[210px] align-top">
+                            {(() => {
+                              const lista = cuentasClientes.filter((c) => String(c.cuenta_madre_id) === String(item.id))
+                              const max = item.max_perfiles || perfilesPorDefecto(item.servicio)
+                              const llena = lista.length >= max
+                              const abierta = madreAbierta === item.id
+                              const barra = llena ? 'bg-rose-500' : lista.length >= max - 1 ? 'bg-amber-500' : 'bg-emerald-500'
+                              return (
+                                <div className="space-y-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setMadreAbierta(abierta ? null : item.id)}
+                                    className="w-full text-left"
+                                    aria-expanded={abierta}
+                                  >
+                                    <div className="flex items-center justify-between gap-2 text-xs">
+                                      <span className="font-semibold">{lista.length}/{max} perfiles</span>
+                                      {llena
+                                        ? <Pill dark={darkMode} tone="danger">Llena</Pill>
+                                        : <span className="text-emerald-600 font-semibold">{max - lista.length} libre(s)</span>}
+                                      <ChevronDown size={14} className={`transition-transform ${abierta ? 'rotate-180' : ''}`} />
+                                    </div>
+                                    <div className={`h-1.5 rounded-full mt-1.5 overflow-hidden ${darkMode ? 'bg-slate-700' : 'bg-slate-200'}`}>
+                                      <div className={`h-full rounded-full transition-all ${barra}`} style={{ width: `${Math.min(100, (lista.length / max) * 100)}%` }} />
+                                    </div>
+                                  </button>
+                                  {abierta && (
+                                    <div className={`rounded-lg border p-2 space-y-1.5 ${ui.cardInner}`}>
+                                      {lista.length === 0 ? (
+                                        <p className={`text-xs ${ui.muted}`}>Todavía no hay clientes en esta cuenta.</p>
+                                      ) : lista.map((c) => (
+                                        <div key={c.id} className="text-xs flex items-center justify-between gap-2">
+                                          <span className="min-w-0 truncate"><strong>{c.perfil_asignado || '—'}</strong> · {c.nombre_completo || 'Sin nombre'}</span>
+                                          <span className={`font-mono shrink-0 ${ui.muted}`}>PIN {c.pin_perfil || 'S/N'} · {formatearFecha(c.fecha_vencimiento)}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })()}
                           </td>
                           <td className="px-4 py-3.5 whitespace-nowrap">{formatearFecha(item.fecha_adquisicion)}</td>
                           <td className="px-4 py-3.5 whitespace-nowrap">
@@ -1146,15 +1357,30 @@ export default function AdminDashboard() {
                               servicio: prev.servicio || madre.servicio || '',
                               correo_cuenta: prev.correo_cuenta || madre.correo || '',
                               contrasena_cuenta: prev.contrasena_cuenta || madre.contrasena || '',
+                              ...(editingItem?.id ? {} : {
+                                perfil_asignado: prev.perfil_asignado || siguientePerfilLibre(
+                                  cuentasClientes
+                                    .filter((c) => c.cuenta_madre_id === madre.id)
+                                    .map((c) => c.perfil_asignado || '')
+                                ),
+                                pin_perfil: prev.pin_perfil || generarPin(),
+                              }),
                             } : {})
                           }))
                         }}
                         className={ui.input}
                       >
                         <option value="">Sin cuenta madre</option>
-                        {cuentasMadre.map((m) => (
-                          <option key={m.id} value={m.id}>{`${m.servicio || 'Servicio'} · ${m.correo || 's/n'}`}</option>
-                        ))}
+                        {cuentasMadre
+                          .filter((m) =>
+                            (ocupadosPorMadre[m.id] || 0) < (m.max_perfiles || perfilesPorDefecto(m.servicio)) ||
+                            m.id === formData.cuenta_madre_id
+                          )
+                          .map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {`${m.servicio || 'Servicio'} · ${m.correo || 's/n'} (${ocupadosPorMadre[m.id] || 0}/${m.max_perfiles || perfilesPorDefecto(m.servicio)})`}
+                            </option>
+                          ))}
                       </select>
                     </Field>
                     <Field dark={darkMode} label="Nombre completo *">
@@ -1174,12 +1400,29 @@ export default function AdminDashboard() {
                         <input type="text" placeholder="Perfil asignado" value={formData.perfil_asignado || ''} onChange={(e) => setFormData({...formData, perfil_asignado: e.target.value})} className={ui.input} />
                       </Field>
                       <Field dark={darkMode} label="PIN de perfil">
+                        <div className="flex gap-2">
                         <input type="text" placeholder="PIN de perfil" value={formData.pin_perfil || ''} onChange={(e) => setFormData({...formData, pin_perfil: e.target.value})} className={ui.input} />
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, pin_perfil: generarPin() })}
+                          className={ui.iconBtn}
+                          title="Generar PIN aleatorio"
+                          aria-label="Generar PIN aleatorio"
+                        >
+                          <Dices size={18} />
+                        </button>
+                      </div>
                       </Field>
                     </div>
                     <Field dark={darkMode} label="Precio de suscripción (MXN)">
                       <input type="number" min="0" placeholder="Precio suscripción MXN" value={formData.precio_suscripcion ?? ''} onChange={(e) => setFormData({...formData, precio_suscripcion: e.target.value})} className={ui.input} />
                     </Field>
+                    {!editingItem?.id && (
+                      <label className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer text-sm ${ui.cardInner}`}>
+                        <input type="checkbox" checked={pagoInicial} onChange={(e) => setPagoInicial(e.target.checked)} className="h-4 w-4 accent-indigo-600" />
+                        Registrar el pago inicial en el historial de pagos
+                      </label>
+                    )}
                     <div className="grid grid-cols-2 gap-3">
                       <Field dark={darkMode} label="Fecha de adquisición *">
                         <input type="date" required value={formData.fecha_adquisicion || ''} onChange={(e) => setFormData({...formData, fecha_adquisicion: e.target.value})} className={ui.input} />
@@ -1195,6 +1438,9 @@ export default function AdminDashboard() {
                   <>
                     <Field dark={darkMode} label="Proveedor *">
                       <input type="text" required placeholder="Proveedor" value={formData.proveedor || ''} onChange={(e) => setFormData({...formData, proveedor: e.target.value})} className={ui.input} />
+                    </Field>
+                    <Field dark={darkMode} label="Perfiles disponibles *">
+                      <input type="number" min="1" max="10" required value={formData.max_perfiles ?? perfilesPorDefecto(formData.servicio)} onChange={(e) => setFormData({...formData, max_perfiles: e.target.value})} className={ui.input} />
                     </Field>
                     <Field dark={darkMode} label="Código panel">
                       <input type="text" placeholder="Código Panel" value={formData.codigo_panel || ''} onChange={(e) => setFormData({...formData, codigo_panel: e.target.value})} className={ui.input} />
@@ -1482,6 +1728,19 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
+        )}
+
+        {renovarItem && (
+          <RenovarModal
+            item={renovarItem}
+            dark={darkMode}
+            onClose={() => setRenovarItem(null)}
+            onDone={async (texto: string) => {
+              setRenovarItem(null)
+              await loadAllData()
+              mostrarToast('ok', texto)
+            }}
+          />
         )}
 
         {/* Aviso flotante */}
