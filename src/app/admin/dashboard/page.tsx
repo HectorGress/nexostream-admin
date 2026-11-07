@@ -11,8 +11,8 @@ import {
   textoDias, validarCorreo, normalizarUrl
 } from '@/lib/cuentas'
 import type { Tone } from '@/lib/cuentas'
-import { descargarReporte } from '@/lib/reporteVencimientos'
-import type { FilaReporte, SeccionReporte } from '@/lib/reporteVencimientos'
+import { descargarReporte } from '@/lib/reporteVenc'
+import type { FilaReporte, SeccionReporte } from '@/lib/reporteVenc'
 import {
   Sun, Moon, LogOut, Users, Server, Tag, LifeBuoy, Search, Plus, Copy, Check,
   Pencil, Trash2, Clock, Inbox, X, RefreshCw, ExternalLink, SearchX, Loader2,
@@ -21,6 +21,10 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import RenovarModal from '@/components/RenovarModal'
+import PushActivar from '@/components/PushActivar'
+import CentroLink from '@/components/admin/CentroLink'
+import ChatReporte, { CalificarReporte } from '@/components/ChatReporte'
+import { notificarUsuario } from '@/lib/pushCliente'
 import {
   perfilesPorDefecto, generarPin, siguientePerfilLibre, diasEntre,
   registrarBitacora, registrarPago
@@ -524,6 +528,16 @@ export default function AdminDashboard() {
     }).eq('id', id)
 
     if (error) alert(`❌ Error al actualizar reporte: ${error.message}`)
+    else {
+      const repAct = reportes.find((r) => r.id === id)
+      if (repAct?.usuario_id) {
+        notificarUsuario(
+          repAct.usuario_id,
+          nuevoEstatus === 'Resuelto' ? 'Tu reporte fue resuelto ✅' : 'Tu reporte está en proceso',
+          mensajeSolucion ? mensajeSolucion.slice(0, 100) : 'Entra a tu panel para ver la respuesta.'
+        )
+      }
+    }
 
     await loadAllData()
   }
@@ -628,6 +642,7 @@ export default function AdminDashboard() {
 
     cerrarEnviar()
     await loadAllData()
+    notificarUsuario(destino.id, 'Tu cuenta ya está lista 🎉', `${sendItem.servicio || 'Tu servicio'}: entra a Mis cuentas para ver tus datos.`)
     mostrarToast('ok', `Cuenta enviada a ${destino.nombre} (@${destino.cliente_id})${incluirPanel ? ' con panel de códigos' : ''}.`)
   }
 
@@ -656,12 +671,12 @@ export default function AdminDashboard() {
 
   // todas = true devuelve ambas secciones sin importar los checks (sirve para mostrar los contadores)
   const armarSeccionesReporte = (todas: boolean = false): SeccionReporte[] => {
-    const fuentes: { correo: string; adq: string; ven: string }[] = []
+    const fuentes: { perfil: string; correo: string; adq: string; ven: string }[] = []
     if (repOrigen !== 'madres') {
-      cuentasClientes.forEach(c => fuentes.push({ correo: c.correo_cuenta || c.correo || '', adq: c.fecha_adquisicion, ven: c.fecha_vencimiento }))
+      cuentasClientes.forEach(c => fuentes.push({ perfil: c.perfil_asignado || '—', correo: c.correo_cuenta || c.correo || '', adq: c.fecha_adquisicion, ven: c.fecha_vencimiento }))
     }
     if (repOrigen !== 'clientes') {
-      cuentasMadre.forEach(m => fuentes.push({ correo: m.correo || '', adq: m.fecha_adquisicion, ven: m.fecha_vencimiento }))
+      cuentasMadre.forEach(m => fuentes.push({ perfil: 'Cuenta madre', correo: m.correo || '', adq: m.fecha_adquisicion, ven: m.fecha_vencimiento }))
     }
 
     const vistos = new Set<string>()
@@ -672,15 +687,17 @@ export default function AdminDashboard() {
       const estado = getSemaforoStatus(f.ven).label
       if (estado !== 'Vencida' && estado !== 'Por Vencer') return
       // Evita repetir exactamente la misma fila
-      const clave = `${f.correo.toLowerCase()}|${f.adq}|${f.ven}`
+      const clave = `${f.perfil.toLowerCase()}|${f.correo.toLowerCase()}|${f.adq}|${f.ven}`
       if (vistos.has(clave)) return
       vistos.add(clave)
 
       const item = {
         fila: {
+          perfil: f.perfil || '—',
           correo: f.correo || '(sin correo)',
           adquisicion: formatearFecha(f.adq),
           vencimiento: formatearFecha(f.ven),
+          detalle: textoDias(getSemaforoStatus(f.ven).dias),
         },
         orden: String(f.ven || ''),
       }
@@ -847,6 +864,8 @@ export default function AdminDashboard() {
             <Link href="/admin/bitacora" className={ui.btnGhost}>
               <History size={16} /> <span>Bitácora</span>
             </Link>
+            <CentroLink dark={darkMode} />
+            <PushActivar dark={darkMode} rol="admin" />
             <button onClick={() => setDarkMode(!darkMode)} className={ui.btnGhost}>
               {darkMode ? <Sun size={16} /> : <Moon size={16} />}
               <span className="hidden sm:inline">{darkMode ? 'Modo claro' : 'Modo oscuro'}</span>
@@ -1306,6 +1325,8 @@ export default function AdminDashboard() {
                           <p><strong>PIN:</strong> {rep.pin || rep.pin_perfil || 'N/A'}</p>
                         </div>
                         <p className="whitespace-pre-line"><strong>Falla reportada:</strong> {getDescripcionReporte(rep)}</p>
+                        <ChatReporte reporteId={rep.id} rol="admin" nombre="Soporte" destinoUid={rep.usuario_id} dark={darkMode} />
+                        <CalificarReporte reporte={rep} rol="admin" dark={darkMode} />
 
                         <div className={`pt-2 border-t space-y-1 ${ui.border}`}>
                           <label className={`block text-xs font-medium ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>Mensaje o indicaciones para el cliente</label>
@@ -1669,7 +1690,7 @@ export default function AdminDashboard() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-semibold text-lg">Reporte de vencimientos</h3>
-                  <p className={`text-xs ${ui.muted}`}>Incluye solo el correo, la fecha de adquisición y la de vencimiento.</p>
+                  <p className={`text-xs ${ui.muted}`}>Incluye el perfil, el correo, la fecha de adquisición y la de vencimiento.</p>
                 </div>
                 <button type="button" onClick={() => setReporteOpen(false)} className={ui.iconBtn} aria-label="Cerrar">
                   <X size={18} />

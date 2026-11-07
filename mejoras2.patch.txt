@@ -1,0 +1,319 @@
+@@FILE src/app/admin/dashboard/page.tsx@@
+@@MARCA CentroLink@@
+@@EDIT D1 · imports nuevos@@
+@@FIND@@
+import RenovarModal from '@/components/RenovarModal'
+@@REPLACE@@
+import RenovarModal from '@/components/RenovarModal'
+import PushActivar from '@/components/PushActivar'
+import CentroLink from '@/components/admin/CentroLink'
+import ChatReporte, { CalificarReporte } from '@/components/ChatReporte'
+import { notificarUsuario } from '@/lib/pushCliente'
+@@END@@
+
+@@EDIT D2 · reporte nuevo (función)@@
+@@FIND@@
+import { descargarReporte } from '@/lib/reporteVencimientos'
+@@REPLACE@@
+import { descargarReporte } from '@/lib/reporteVenc'
+@@END@@
+
+@@EDIT D3 · reporte nuevo (tipos)@@
+@@FIND@@
+import type { FilaReporte, SeccionReporte } from '@/lib/reporteVencimientos'
+@@REPLACE@@
+import type { FilaReporte, SeccionReporte } from '@/lib/reporteVenc'
+@@END@@
+
+@@EDIT D4 · reporte: tipo de las fuentes@@
+@@FIND@@
+const fuentes: { correo: string; adq: string; ven: string }[] = []
+@@REPLACE@@
+const fuentes: { perfil: string; correo: string; adq: string; ven: string }[] = []
+@@END@@
+
+@@EDIT D5 · reporte: perfil de las cuentas de clientes@@
+@@FIND@@
+cuentasClientes.forEach(c => fuentes.push({ correo: c.correo_cuenta || c.correo || '', adq: c.fecha_adquisicion, ven: c.fecha_vencimiento }))
+@@REPLACE@@
+cuentasClientes.forEach(c => fuentes.push({ perfil: c.perfil_asignado || '—', correo: c.correo_cuenta || c.correo || '', adq: c.fecha_adquisicion, ven: c.fecha_vencimiento }))
+@@END@@
+
+@@EDIT D6 · reporte: cuentas madre@@
+@@FIND@@
+cuentasMadre.forEach(m => fuentes.push({ correo: m.correo || '', adq: m.fecha_adquisicion, ven: m.fecha_vencimiento }))
+@@REPLACE@@
+cuentasMadre.forEach(m => fuentes.push({ perfil: 'Cuenta madre', correo: m.correo || '', adq: m.fecha_adquisicion, ven: m.fecha_vencimiento }))
+@@END@@
+
+@@EDIT D7 · reporte: no mezclar perfiles de la misma cuenta@@
+@@FIND@@
+const clave = `${f.correo.toLowerCase()}|${f.adq}|${f.ven}`
+@@REPLACE@@
+const clave = `${f.perfil.toLowerCase()}|${f.correo.toLowerCase()}|${f.adq}|${f.ven}`
+@@END@@
+
+@@EDIT D8 · reporte: perfil y estado en cada fila@@
+@@FIND@@
+correo: f.correo || '(sin correo)',
+          adquisicion: formatearFecha(f.adq),
+          vencimiento: formatearFecha(f.ven),
+@@REPLACE@@
+perfil: f.perfil || '—',
+          correo: f.correo || '(sin correo)',
+          adquisicion: formatearFecha(f.adq),
+          vencimiento: formatearFecha(f.ven),
+          detalle: textoDias(getSemaforoStatus(f.ven).dias),
+@@END@@
+
+@@EDIT D9 · reporte: texto de la ventana@@
+@@FIND@@
+Incluye solo el correo, la fecha de adquisición y la de vencimiento.
+@@REPLACE@@
+Incluye el perfil, el correo, la fecha de adquisición y la de vencimiento.
+@@END@@
+
+@@EDIT D10 · botones en el encabezado@@
+@@FIND@@
+<History size={16} /> <span>Bitácora</span>
+            </Link>
+@@REPLACE@@
+<History size={16} /> <span>Bitácora</span>
+            </Link>
+            <CentroLink dark={darkMode} />
+            <PushActivar dark={darkMode} rol="admin" />
+@@END@@
+
+@@EDIT D11 · aviso al celular del cliente al enviarle una cuenta@@
+@@FIND@@
+mostrarToast('ok', `Cuenta enviada a ${destino.nombre} (@${destino.cliente_id})${incluirPanel ? ' con panel de códigos' : ''}.`)
+@@REPLACE@@
+notificarUsuario(destino.id, 'Tu cuenta ya está lista 🎉', `${sendItem.servicio || 'Tu servicio'}: entra a Mis cuentas para ver tus datos.`)
+    mostrarToast('ok', `Cuenta enviada a ${destino.nombre} (@${destino.cliente_id})${incluirPanel ? ' con panel de códigos' : ''}.`)
+@@END@@
+
+@@EDIT D12 · aviso al celular del cliente al responder su reporte@@
+@@FIND@@
+if (error) alert(`❌ Error al actualizar reporte: ${error.message}`)
+@@REPLACE@@
+if (error) alert(`❌ Error al actualizar reporte: ${error.message}`)
+    else {
+      const repAct = reportes.find((r) => r.id === id)
+      if (repAct?.usuario_id) {
+        notificarUsuario(
+          repAct.usuario_id,
+          nuevoEstatus === 'Resuelto' ? 'Tu reporte fue resuelto ✅' : 'Tu reporte está en proceso',
+          mensajeSolucion ? mensajeSolucion.slice(0, 100) : 'Entra a tu panel para ver la respuesta.'
+        )
+      }
+    }
+@@END@@
+
+@@EDIT D13 · conversación y calificación en cada reporte@@
+@@FIND@@
+<p className="whitespace-pre-line"><strong>Falla reportada:</strong> {getDescripcionReporte(rep)}</p>
+@@REPLACE@@
+<p className="whitespace-pre-line"><strong>Falla reportada:</strong> {getDescripcionReporte(rep)}</p>
+                        <ChatReporte reporteId={rep.id} rol="admin" nombre="Soporte" destinoUid={rep.usuario_id} dark={darkMode} />
+                        <CalificarReporte reporte={rep} rol="admin" dark={darkMode} />
+@@END@@
+
+@@FILE src/app/admin/reportes/page.tsx@@
+@@MARCA CalificarReporte@@
+@@EDIT R1 · imports nuevos@@
+@@FIND@@
+import Link from 'next/link'
+@@REPLACE@@
+import Link from 'next/link'
+import ChatReporte, { CalificarReporte } from '@/components/ChatReporte'
+import { notificarUsuario } from '@/lib/pushCliente'
+@@END@@
+
+@@EDIT R2 · aviso al celular del cliente al responder@@
+@@FIND@@
+setSoluciones({ ...soluciones, [id]: '' })
+@@REPLACE@@
+const repResp = reportes.find((r) => r.id === id)
+    if (repResp?.usuario_id) notificarUsuario(repResp.usuario_id, 'Respondieron tu reporte ✅', solucionTexto.slice(0, 100))
+    setSoluciones({ ...soluciones, [id]: '' })
+@@END@@
+
+@@EDIT R3 · conversación y calificación@@
+@@FIND@@
+{rep.solucion && (
+@@REPLACE@@
+<ChatReporte reporteId={rep.id} rol="admin" nombre="Soporte" destinoUid={rep.usuario_id} dark={darkMode} />
+                  <CalificarReporte reporte={rep} rol="admin" dark={darkMode} />
+
+                  {rep.solucion && (
+@@END@@
+
+@@FILE src/app/cliente/dashboard/page.tsx@@
+@@MARCA RenovarCliente@@
+@@EDIT C1 · icono nuevo@@
+@@FIND@@
+ExternalLink, KeyRound, X, AtSign, AlertCircle
+@@REPLACE@@
+ExternalLink, KeyRound, X, AtSign, AlertCircle, Receipt
+@@END@@
+
+@@EDIT C2 · imports nuevos@@
+@@FIND@@
+import type { LucideIcon } from 'lucide-react'
+@@REPLACE@@
+import type { LucideIcon } from 'lucide-react'
+import PushActivar from '@/components/PushActivar'
+import AvisosBanner from '@/components/AvisosBanner'
+import RenovarCliente from '@/components/RenovarCliente'
+import MisPagos from '@/components/MisPagos'
+import ArmaTuCombo from '@/components/ArmaTuCombo'
+import ReferidosCard from '@/components/ReferidosCard'
+import GuiaSoporte from '@/components/GuiaSoporte'
+import BarraDias from '@/components/BarraDias'
+import ChatReporte, { CalificarReporte } from '@/components/ChatReporte'
+import { notificarAdmins } from '@/lib/pushCliente'
+@@END@@
+
+@@EDIT C3 · pestaña Mis pagos (tipo)@@
+@@FIND@@
+useState<'inicio' | 'cuentas' | 'soporte'>('inicio')
+@@REPLACE@@
+useState<'inicio' | 'cuentas' | 'pagos' | 'soporte'>('inicio')
+@@END@@
+
+@@EDIT C4 · estados nuevos@@
+@@FIND@@
+const [copiedField, setCopiedField] = useState<string | null>(null)
+@@REPLACE@@
+const [copiedField, setCopiedField] = useState<string | null>(null)
+  const [renovarCta, setRenovarCta] = useState<any>(null)
+  const [avisoOk, setAvisoOk] = useState('')
+@@END@@
+
+@@EDIT C5 · botón de avisos en el encabezado@@
+@@FIND@@
+<UserRound size={16} /> <span className="hidden sm:inline">Mi perfil</span>
+            </button>
+@@REPLACE@@
+<UserRound size={16} /> <span className="hidden sm:inline">Mi perfil</span>
+            </button>
+            <PushActivar dark={darkMode} rol="cliente" />
+@@END@@
+
+@@EDIT C6 · pestaña Mis pagos (menú)@@
+@@FIND@@
+{ id: 'soporte', name: 'Soporte', icon: LifeBuoy, count: null as number | null },
+@@REPLACE@@
+{ id: 'pagos', name: 'Mis pagos', icon: Receipt, count: null as number | null },
+    { id: 'soporte', name: 'Soporte', icon: LifeBuoy, count: null as number | null },
+@@END@@
+
+@@EDIT C7 · avisos del administrador en Inicio@@
+@@FIND@@
+{/* Tarjeta de Pago Klar */}
+@@REPLACE@@
+<AvisosBanner dark={darkMode} />
+
+            {/* Tarjeta de Pago Klar */}
+@@END@@
+
+@@EDIT C8 · combo y referidos en Inicio@@
+@@FIND@@
+{/* Combos Terroríficos */}
+@@REPLACE@@
+<ArmaTuCombo catalogo={catalogo} perfil={perfil} dark={darkMode} />
+            {user?.uid && <ReferidosCard uid={user.uid} perfil={perfil} dark={darkMode} />}
+
+            {/* Combos Terroríficos */}
+@@END@@
+
+@@EDIT C9 · barra de días en cada cuenta@@
+@@FIND@@
+<p className={`text-xs ${ui.muted}`}>{textoDias(estado.dias)} · {formatearFecha(c.fecha_vencimiento)}</p>
+@@REPLACE@@
+<p className={`text-xs ${ui.muted}`}>{textoDias(estado.dias)} · {formatearFecha(c.fecha_vencimiento)}</p>
+                          <BarraDias adquisicion={c.fecha_adquisicion} vencimiento={c.fecha_vencimiento} dark={darkMode} />
+@@END@@
+
+@@EDIT C10 · botón Renovar en cada cuenta@@
+@@FIND@@
+<button type="button" onClick={() => copiarTodo(c)} className={ui.btnGhost}>
+@@REPLACE@@
+<button type="button" onClick={() => setRenovarCta(c)} className={ui.btnPrimary}>
+                          <Receipt size={15} /> Renovar
+                        </button>
+                        <button type="button" onClick={() => copiarTodo(c)} className={ui.btnGhost}>
+@@END@@
+
+@@EDIT C11 · pestaña Mis pagos (contenido)@@
+@@FIND@@
+{tab === 'soporte' && (
+@@REPLACE@@
+{tab === 'pagos' && user?.uid && (
+          <MisPagos uid={user.uid} cuentas={misCuentas} perfil={perfil} dark={darkMode} />
+        )}
+
+        {tab === 'soporte' && (
+@@END@@
+
+@@EDIT C12 · guía y preguntas antes de reportar@@
+@@FIND@@
+{/* Formulario Completo de Reportes */}
+@@REPLACE@@
+<GuiaSoporte dark={darkMode} />
+
+            {/* Formulario Completo de Reportes */}
+@@END@@
+
+@@EDIT C13 · aviso al celular del administrador por reporte nuevo@@
+@@FIND@@
+setMsg('✅ Reporte enviado con éxito. Puedes consultar su avance abajo.')
+@@REPLACE@@
+notificarAdmins('reporte', `${nombreCliente || perfil?.nombre || 'Cliente'}: ${titulo}`)
+      setMsg('✅ Reporte enviado con éxito. Puedes consultar su avance abajo.')
+@@END@@
+
+@@EDIT C14 · conversación y calificación en cada reporte@@
+@@FIND@@
+<span><strong>Respuesta del administrador:</strong> {rep.solucion}</span>
+                              </div>
+                            )}
+@@REPLACE@@
+<span><strong>Respuesta del administrador:</strong> {rep.solucion}</span>
+                              </div>
+                            )}
+                            <ChatReporte reporteId={rep.id} rol="cliente" nombre={perfil?.nombre || 'Cliente'} dark={darkMode} />
+                            <CalificarReporte reporte={rep} rol="cliente" dark={darkMode} />
+@@END@@
+
+@@EDIT C15 · ventana de renovar con comprobante@@
+@@FIND@@
+{modalPerfil && (
+@@REPLACE@@
+{renovarCta && user?.uid && (
+        <RenovarCliente
+          cuenta={renovarCta}
+          uid={user.uid}
+          perfil={perfil}
+          dark={darkMode}
+          onClose={() => setRenovarCta(null)}
+          onDone={(texto: string) => {
+            setRenovarCta(null)
+            setAvisoOk(texto)
+            setTab('pagos')
+            setTimeout(() => setAvisoOk(''), 6000)
+          }}
+        />
+      )}
+
+      {avisoOk && (
+        <div
+          role="status"
+          className={`fixed bottom-5 right-5 z-[60] max-w-sm px-4 py-3 rounded-xl border text-sm shadow-lg ${darkMode ? 'bg-slate-800' : 'bg-white'} ${toneClasses(darkMode, 'success')}`}
+        >
+          {avisoOk}
+        </div>
+      )}
+
+      {modalPerfil && (
+@@END@@

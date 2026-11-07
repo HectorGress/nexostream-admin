@@ -9,6 +9,8 @@ import type { Tone } from '@/lib/cuentas'
 import { Sun, Moon, Check, ArrowLeft, RefreshCw, Inbox, LifeBuoy, Clock, CheckCircle2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import Link from 'next/link'
+import ChatReporte, { CalificarReporte } from '@/components/ChatReporte'
+import { notificarUsuario } from '@/lib/pushCliente'
 
 /* ───────────────────────── Helpers (sin lógica de negocio) ───────────────────────── */
 
@@ -164,6 +166,8 @@ export default function AdminReportesPage() {
       return
     }
 
+    const repResp = reportes.find((r) => r.id === id)
+    if (repResp?.usuario_id) notificarUsuario(repResp.usuario_id, 'Respondieron tu reporte ✅', solucionTexto.slice(0, 100))
     setSoluciones({ ...soluciones, [id]: '' })
     cargarReportes()
   }
@@ -271,6 +275,9 @@ export default function AdminReportesPage() {
                   }`}>
                     <strong>Falla reportada:</strong> <span className="whitespace-pre-line">{getDescripcionReporte(rep)}</span>
                   </div>
+
+                  <ChatReporte reporteId={rep.id} rol="admin" nombre="Soporte" destinoUid={rep.usuario_id} dark={darkMode} />
+                  <CalificarReporte reporte={rep} rol="admin" dark={darkMode} />
 
                   {rep.solucion && (
                     <div className={`p-3.5 rounded-xl text-sm border ${toneClasses(darkMode, 'success')}`}>

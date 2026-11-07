@@ -12,9 +12,19 @@ import type { Tone } from '@/lib/cuentas'
 import {
   Sun, Moon, LogOut, Copy, Check, Landmark, Sparkles, UserRound, Crown, LifeBuoy,
   Send, Search, Inbox, SearchX, Lightbulb, Loader2, Home, Tv, Eye, EyeOff,
-  ExternalLink, KeyRound, X, AtSign, AlertCircle
+  ExternalLink, KeyRound, X, AtSign, AlertCircle, Receipt
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import PushActivar from '@/components/PushActivar'
+import AvisosBanner from '@/components/AvisosBanner'
+import RenovarCliente from '@/components/RenovarCliente'
+import MisPagos from '@/components/MisPagos'
+import ArmaTuCombo from '@/components/ArmaTuCombo'
+import ReferidosCard from '@/components/ReferidosCard'
+import GuiaSoporte from '@/components/GuiaSoporte'
+import BarraDias from '@/components/BarraDias'
+import ChatReporte, { CalificarReporte } from '@/components/ChatReporte'
+import { notificarAdmins } from '@/lib/pushCliente'
 
 /* ───────────────────────── Helpers visuales ───────────────────────── */
 
@@ -100,7 +110,7 @@ export default function ClienteDashboard() {
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
   const [darkMode, setDarkMode] = useState(false)
-  const [tab, setTab] = useState<'inicio' | 'cuentas' | 'soporte'>('inicio')
+  const [tab, setTab] = useState<'inicio' | 'cuentas' | 'pagos' | 'soporte'>('inicio')
 
   // Perfil del cliente (nombre + ID único)
   const [perfil, setPerfil] = useState<any>(null)
@@ -115,6 +125,8 @@ export default function ClienteDashboard() {
   const [misCuentas, setMisCuentas] = useState<any[]>([])
   const [mostrarPass, setMostrarPass] = useState<{ [key: string]: boolean }>({})
   const [copiedField, setCopiedField] = useState<string | null>(null)
+  const [renovarCta, setRenovarCta] = useState<any>(null)
+  const [avisoOk, setAvisoOk] = useState('')
 
   // Consulta de Estatus de Reportes
   const [searchCorreo, setSearchCorreo] = useState('')
@@ -360,6 +372,7 @@ export default function ClienteDashboard() {
     const { error } = await supabase.from('reportes').insert([payloadReporte])
 
     if (!error) {
+      notificarAdmins('reporte', `${nombreCliente || perfil?.nombre || 'Cliente'}: ${titulo}`)
       setMsg('✅ Reporte enviado con éxito. Puedes consultar su avance abajo.')
       setNombreCliente('')
       setTitulo('')
@@ -440,6 +453,7 @@ export default function ClienteDashboard() {
   const tabs = [
     { id: 'inicio', name: 'Inicio', icon: Home, count: null as number | null },
     { id: 'cuentas', name: 'Mis cuentas', icon: Tv, count: misCuentas.length },
+    { id: 'pagos', name: 'Mis pagos', icon: Receipt, count: null as number | null },
     { id: 'soporte', name: 'Soporte', icon: LifeBuoy, count: null as number | null },
   ] as const
 
@@ -499,6 +513,7 @@ export default function ClienteDashboard() {
             <button onClick={abrirPerfil} className={ui.btnGhost}>
               <UserRound size={16} /> <span className="hidden sm:inline">Mi perfil</span>
             </button>
+            <PushActivar dark={darkMode} rol="cliente" />
             <button onClick={() => setDarkMode(!darkMode)} className={ui.btnGhost}>
               {darkMode ? <Sun size={16} /> : <Moon size={16} />}
               <span className="hidden sm:inline">{darkMode ? 'Modo claro' : 'Modo oscuro'}</span>
@@ -559,6 +574,8 @@ export default function ClienteDashboard() {
         {/* ═══════════════ INICIO ═══════════════ */}
         {tab === 'inicio' && (
           <>
+            <AvisosBanner dark={darkMode} />
+
             {/* Tarjeta de Pago Klar */}
             <section className="rounded-2xl p-5 sm:p-6 text-white bg-gradient-to-r from-indigo-600 to-blue-600 shadow-lg shadow-indigo-600/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="flex items-start gap-3">
@@ -613,6 +630,9 @@ export default function ClienteDashboard() {
                 hint={busquedaRealizada ? `${reportesAbiertos} abiertos` : 'Consulta en Soporte'}
               />
             </section>
+
+            <ArmaTuCombo catalogo={catalogo} perfil={perfil} dark={darkMode} />
+            {user?.uid && <ReferidosCard uid={user.uid} perfil={perfil} dark={darkMode} />}
 
             {/* Combos Terroríficos */}
             <section className="space-y-3">
@@ -741,6 +761,7 @@ export default function ClienteDashboard() {
                         <div>
                           <h3 className="text-base font-semibold">{c.servicio || 'Servicio'}</h3>
                           <p className={`text-xs ${ui.muted}`}>{textoDias(estado.dias)} · {formatearFecha(c.fecha_vencimiento)}</p>
+                          <BarraDias adquisicion={c.fecha_adquisicion} vencimiento={c.fecha_vencimiento} dark={darkMode} />
                         </div>
                         <Pill dark={darkMode} tone={estado.tone}>{etiqueta}</Pill>
                       </div>
@@ -802,6 +823,9 @@ export default function ClienteDashboard() {
                       )}
 
                       <div className="flex flex-wrap gap-2 pt-1">
+                        <button type="button" onClick={() => setRenovarCta(c)} className={ui.btnPrimary}>
+                          <Receipt size={15} /> Renovar
+                        </button>
                         <button type="button" onClick={() => copiarTodo(c)} className={ui.btnGhost}>
                           {copiedField === `todo-${c.id}` ? <Check size={15} /> : <Copy size={15} />}
                           {copiedField === `todo-${c.id}` ? '¡Copiado!' : 'Copiar todo'}
@@ -819,8 +843,14 @@ export default function ClienteDashboard() {
         )}
 
         {/* ═══════════════ SOPORTE ═══════════════ */}
+        {tab === 'pagos' && user?.uid && (
+          <MisPagos uid={user.uid} cuentas={misCuentas} perfil={perfil} dark={darkMode} />
+        )}
+
         {tab === 'soporte' && (
           <>
+            <GuiaSoporte dark={darkMode} />
+
             {/* Formulario Completo de Reportes */}
             <section className={`p-5 sm:p-6 rounded-2xl border space-y-4 ${ui.card}`}>
               <div>
@@ -974,6 +1004,8 @@ export default function ClienteDashboard() {
                                 <span><strong>Respuesta del administrador:</strong> {rep.solucion}</span>
                               </div>
                             )}
+                            <ChatReporte reporteId={rep.id} rol="cliente" nombre={perfil?.nombre || 'Cliente'} dark={darkMode} />
+                            <CalificarReporte reporte={rep} rol="cliente" dark={darkMode} />
                           </div>
                           <Pill dark={darkMode} tone={tone}>{rep.estatus || rep.estado || 'Pendiente'}</Pill>
                         </div>
@@ -1004,6 +1036,31 @@ export default function ClienteDashboard() {
       </div>
 
       {/* ═══════════════ MODAL: Mi perfil (nombre + ID único) ═══════════════ */}
+      {renovarCta && user?.uid && (
+        <RenovarCliente
+          cuenta={renovarCta}
+          uid={user.uid}
+          perfil={perfil}
+          dark={darkMode}
+          onClose={() => setRenovarCta(null)}
+          onDone={(texto: string) => {
+            setRenovarCta(null)
+            setAvisoOk(texto)
+            setTab('pagos')
+            setTimeout(() => setAvisoOk(''), 6000)
+          }}
+        />
+      )}
+
+      {avisoOk && (
+        <div
+          role="status"
+          className={`fixed bottom-5 right-5 z-[60] max-w-sm px-4 py-3 rounded-xl border text-sm shadow-lg ${darkMode ? 'bg-slate-800' : 'bg-white'} ${toneClasses(darkMode, 'success')}`}
+        >
+          {avisoOk}
+        </div>
+      )}
+
       {modalPerfil && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 z-50 overflow-y-auto">
           <div className={`border w-full max-w-md p-6 rounded-2xl shadow-2xl space-y-4 my-8 ${ui.modal}`}>
