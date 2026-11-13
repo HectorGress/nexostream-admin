@@ -1,4 +1,82 @@
+/* NEXO TEMA CÁLIDO: papel, tinta y terracota */
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Bricolage Grotesque', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+
+  /* Formas menos "burbuja" */
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.625rem;
+  --radius-2xl: 0.875rem;
+  --shadow-sm: 0 1px 0 rgb(31 26 22 / 0.05);
+
+  --color-white: #fffdf9;
+
+  /* Neutros cálidos: papel (claros) y tinta (oscuros) */
+  --color-slate-50: #faf6ef;
+  --color-slate-100: #f3ede3;
+  --color-slate-200: #e7dfd1;
+  --color-slate-300: #d3c8b6;
+  --color-slate-400: #a89b88;
+  --color-slate-500: #7d7163;
+  --color-slate-600: #5e5448;
+  --color-slate-700: #463e35;
+  --color-slate-800: #2e2822;
+  --color-slate-900: #1f1a16;
+  --color-slate-950: #14110e;
+
+  /* Acento: terracota (reemplaza el índigo y el azul) */
+  --color-indigo-50: #fdf1ec;
+  --color-indigo-100: #fbdfd3;
+  --color-indigo-200: #f6bfa8;
+  --color-indigo-300: #ee9873;
+  --color-indigo-400: #e47245;
+  --color-indigo-500: #d4552a;
+  --color-indigo-600: #b9441d;
+  --color-indigo-700: #983717;
+  --color-indigo-800: #7c2f17;
+  --color-indigo-900: #662a16;
+  --color-indigo-950: #38130a;
+  --color-blue-50: #fdf1ec;
+  --color-blue-100: #fbdfd3;
+  --color-blue-200: #f6bfa8;
+  --color-blue-300: #ee9873;
+  --color-blue-400: #e47245;
+  --color-blue-500: #d4552a;
+  --color-blue-600: #b9441d;
+  --color-blue-700: #983717;
+  --color-blue-800: #7c2f17;
+  --color-blue-900: #662a16;
+  --color-blue-950: #38130a;
+
+  /* Verde musgo (todo bien) */
+  --color-emerald-50: #eef5e8;
+  --color-emerald-100: #dbe9cf;
+  --color-emerald-200: #bcd6a8;
+  --color-emerald-300: #97bd7d;
+  --color-emerald-400: #72a254;
+  --color-emerald-500: #58893c;
+  --color-emerald-600: #46702f;
+  --color-emerald-700: #385b27;
+  --color-emerald-800: #2d4a21;
+  --color-emerald-900: #243b1b;
+  --color-emerald-950: #12200d;
+
+  /* Mostaza (aviso) */
+  --color-amber-50: #fcf5e0;
+  --color-amber-100: #f8e9b8;
+  --color-amber-200: #f1d57c;
+  --color-amber-300: #e7ba3d;
+  --color-amber-400: #d79e18;
+  --color-amber-500: #b9820f;
+  --color-amber-600: #976510;
+  --color-amber-700: #794f11;
+  --color-amber-800: #5f3f12;
+  --color-amber-900: #4b3312;
+  --color-amber-950: #271a07;
+}
 
 :root {
   --background: #ffffff;
@@ -23,4 +101,32 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* NEXO TEMA CÁLIDO: reglas finales */
+:root { --background: #faf6ef; --foreground: #1f1a16; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2 { font-family: var(--font-display); letter-spacing: -0.02em; font-weight: 700; }
+.text-2xl.font-bold, .text-3xl.font-bold { font-family: var(--font-display); letter-spacing: -0.02em; }
+::selection { background: #f6bfa8; color: #38130a; }
+
+/* Una sola animación con intención: el contenido sube suave al entrar */
+@keyframes nexo-subir {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.min-h-screen > .mx-auto > * { animation: nexo-subir 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.min-h-screen > .mx-auto > *:nth-child(2) { animation-delay: 0.04s; }
+.min-h-screen > .mx-auto > *:nth-child(3) { animation-delay: 0.08s; }
+.min-h-screen > .mx-auto > *:nth-child(4) { animation-delay: 0.12s; }
+.min-h-screen > .mx-auto > *:nth-child(5) { animation-delay: 0.16s; }
+.min-h-screen > .mx-auto > *:nth-child(6) { animation-delay: 0.2s; }
+@media (prefers-reduced-motion: reduce) {
+  .min-h-screen > .mx-auto > * { animation: none; }
 }

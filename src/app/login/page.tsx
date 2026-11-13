@@ -9,6 +9,7 @@ import {
 } from 'firebase/auth'
 import { createClient } from '@/lib/supabase'
 import { validarCorreo } from '@/lib/cuentas'
+import { useTema } from '@/lib/useTema'
 import { ShieldCheck, Mail, Lock, LogIn, UserPlus, Sun, Moon, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
@@ -17,7 +18,7 @@ export default function LoginPage() {
   const [isRegister, setIsRegister] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [loading, setLoading] = useState(false)
-  const [isDarkMode, setIsDarkMode] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useTema()
   const [showPassword, setShowPassword] = useState(false)
 
   const router = useRouter()

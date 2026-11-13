@@ -8,6 +8,7 @@ const EVENTOS: Record<string, { titulo: string; url: string }> = {
   solicitud: { titulo: 'Nueva solicitud de renovación', url: '/admin/centro' },
   reporte: { titulo: 'Nuevo reporte de soporte', url: '/admin/dashboard' },
   mensaje: { titulo: 'Nuevo mensaje de un cliente', url: '/admin/dashboard' },
+  pedido: { titulo: 'Un cliente pidió un servicio', url: '/admin/centro' },
 }
 
 const rutaSegura = (u: unknown, defecto: string) => {

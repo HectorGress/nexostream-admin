@@ -1,0 +1,532 @@
+@@FILE src/app/globals.css@@
+@@MARCA NEXO TEMA@@
+@@EDIT G1 · tema cálido (colores, fuentes y formas)@@
+@@FIND@@
+@import "tailwindcss";
+@@REPLACE@@
+/* NEXO TEMA CÁLIDO: papel, tinta y terracota */
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Bricolage Grotesque', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+
+  /* Formas menos "burbuja" */
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.625rem;
+  --radius-2xl: 0.875rem;
+  --shadow-sm: 0 1px 0 rgb(31 26 22 / 0.05);
+
+  --color-white: #fffdf9;
+
+  /* Neutros cálidos: papel (claros) y tinta (oscuros) */
+  --color-slate-50: #faf6ef;
+  --color-slate-100: #f3ede3;
+  --color-slate-200: #e7dfd1;
+  --color-slate-300: #d3c8b6;
+  --color-slate-400: #a89b88;
+  --color-slate-500: #7d7163;
+  --color-slate-600: #5e5448;
+  --color-slate-700: #463e35;
+  --color-slate-800: #2e2822;
+  --color-slate-900: #1f1a16;
+  --color-slate-950: #14110e;
+
+  /* Acento: terracota (reemplaza el índigo y el azul) */
+  --color-indigo-50: #fdf1ec;
+  --color-indigo-100: #fbdfd3;
+  --color-indigo-200: #f6bfa8;
+  --color-indigo-300: #ee9873;
+  --color-indigo-400: #e47245;
+  --color-indigo-500: #d4552a;
+  --color-indigo-600: #b9441d;
+  --color-indigo-700: #983717;
+  --color-indigo-800: #7c2f17;
+  --color-indigo-900: #662a16;
+  --color-indigo-950: #38130a;
+  --color-blue-50: #fdf1ec;
+  --color-blue-100: #fbdfd3;
+  --color-blue-200: #f6bfa8;
+  --color-blue-300: #ee9873;
+  --color-blue-400: #e47245;
+  --color-blue-500: #d4552a;
+  --color-blue-600: #b9441d;
+  --color-blue-700: #983717;
+  --color-blue-800: #7c2f17;
+  --color-blue-900: #662a16;
+  --color-blue-950: #38130a;
+
+  /* Verde musgo (todo bien) */
+  --color-emerald-50: #eef5e8;
+  --color-emerald-100: #dbe9cf;
+  --color-emerald-200: #bcd6a8;
+  --color-emerald-300: #97bd7d;
+  --color-emerald-400: #72a254;
+  --color-emerald-500: #58893c;
+  --color-emerald-600: #46702f;
+  --color-emerald-700: #385b27;
+  --color-emerald-800: #2d4a21;
+  --color-emerald-900: #243b1b;
+  --color-emerald-950: #12200d;
+
+  /* Mostaza (aviso) */
+  --color-amber-50: #fcf5e0;
+  --color-amber-100: #f8e9b8;
+  --color-amber-200: #f1d57c;
+  --color-amber-300: #e7ba3d;
+  --color-amber-400: #d79e18;
+  --color-amber-500: #b9820f;
+  --color-amber-600: #976510;
+  --color-amber-700: #794f11;
+  --color-amber-800: #5f3f12;
+  --color-amber-900: #4b3312;
+  --color-amber-950: #271a07;
+}
+@@END@@
+
+@@APPEND@@
+/* NEXO TEMA CÁLIDO: reglas finales */
+:root { --background: #faf6ef; --foreground: #1f1a16; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2 { font-family: var(--font-display); letter-spacing: -0.02em; font-weight: 700; }
+.text-2xl.font-bold, .text-3xl.font-bold { font-family: var(--font-display); letter-spacing: -0.02em; }
+::selection { background: #f6bfa8; color: #38130a; }
+
+/* Una sola animación con intención: el contenido sube suave al entrar */
+@keyframes nexo-subir {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.min-h-screen > .mx-auto > * { animation: nexo-subir 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.min-h-screen > .mx-auto > *:nth-child(2) { animation-delay: 0.04s; }
+.min-h-screen > .mx-auto > *:nth-child(3) { animation-delay: 0.08s; }
+.min-h-screen > .mx-auto > *:nth-child(4) { animation-delay: 0.12s; }
+.min-h-screen > .mx-auto > *:nth-child(5) { animation-delay: 0.16s; }
+.min-h-screen > .mx-auto > *:nth-child(6) { animation-delay: 0.2s; }
+@media (prefers-reduced-motion: reduce) {
+  .min-h-screen > .mx-auto > * { animation: none; }
+}
+@@END@@
+
+@@FILE src/app/login/page.tsx@@
+@@MARCA useTema@@
+@@EDIT L1 · modo oscuro recordado (import)@@
+@@FIND@@
+import { validarCorreo } from '@/lib/cuentas'
+@@REPLACE@@
+import { validarCorreo } from '@/lib/cuentas'
+import { useTema } from '@/lib/useTema'
+@@END@@
+
+@@EDIT L2 · modo oscuro recordado@@
+@@FIND@@
+const [isDarkMode, setIsDarkMode] = useState(false)
+@@REPLACE@@
+const [isDarkMode, setIsDarkMode] = useTema()
+@@END@@
+
+@@FILE src/app/admin/reportes/page.tsx@@
+@@MARCA useTema@@
+@@EDIT R1 · modo oscuro recordado (import)@@
+@@FIND@@
+import { notificarUsuario } from '@/lib/pushCliente'
+@@REPLACE@@
+import { notificarUsuario } from '@/lib/pushCliente'
+import { useTema } from '@/lib/useTema'
+@@END@@
+
+@@EDIT R2 · modo oscuro recordado@@
+@@FIND@@
+const [darkMode, setDarkMode] = useState(false)
+@@REPLACE@@
+const [darkMode, setDarkMode] = useTema()
+@@END@@
+
+@@FILE src/app/cliente/dashboard/page.tsx@@
+@@MARCA PrimerosPasos@@
+@@EDIT C1 · modo oscuro recordado@@
+@@FIND@@
+const [darkMode, setDarkMode] = useState(false)
+@@REPLACE@@
+const [darkMode, setDarkMode] = useTema()
+@@END@@
+
+@@EDIT C2 · imports nuevos@@
+@@FIND@@
+import { notificarAdmins } from '@/lib/pushCliente'
+@@REPLACE@@
+import { notificarAdmins } from '@/lib/pushCliente'
+import PrimerosPasos from '@/components/PrimerosPasos'
+import NavInferior from '@/components/NavInferior'
+import NivelCliente from '@/components/NivelCliente'
+import EstadoServicios from '@/components/EstadoServicios'
+import PedirServicio from '@/components/PedirServicio'
+import ServicioPunto from '@/components/ServicioPunto'
+import { useTema } from '@/lib/useTema'
+@@END@@
+
+@@EDIT C3 · títulos sin emojis (combos)@@
+@@FIND@@
+🎃 Combos terroríficos de octubre
+@@REPLACE@@
+Combos del mes
+@@END@@
+
+@@EDIT C4 · títulos sin emojis (perfiles)@@
+@@FIND@@
+🍿 Precios por perfil (1 mes)
+@@REPLACE@@
+Precios por perfil · 1 mes
+@@END@@
+
+@@EDIT C5 · títulos sin emojis (completas)@@
+@@FIND@@
+👑 Cuentas completas exclusivas
+@@REPLACE@@
+Cuentas completas
+@@END@@
+
+@@EDIT C6 · primeros pasos y estado de servicios@@
+@@FIND@@
+<AvisosBanner dark={darkMode} />
+@@REPLACE@@
+<PrimerosPasos dark={darkMode} perfil={perfil} cuentas={misCuentas} onPerfil={abrirPerfil} />
+            <AvisosBanner dark={darkMode} />
+            <EstadoServicios dark={darkMode} />
+@@END@@
+
+@@EDIT C7 · nivel del cliente@@
+@@FIND@@
+<ArmaTuCombo catalogo={catalogo} perfil={perfil} dark={darkMode} />
+@@REPLACE@@
+{user?.uid && <NivelCliente uid={user.uid} dark={darkMode} />}
+            <ArmaTuCombo catalogo={catalogo} perfil={perfil} dark={darkMode} />
+@@END@@
+
+@@EDIT C8 · botón Pedir en la lista de precios@@
+@@FIND@@
+<span className={`font-bold ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>${p.precio} MXN</span>
+@@REPLACE@@
+<PedirServicio item={p} uid={user?.uid} perfil={perfil} dark={darkMode} />
+@@END@@
+
+@@EDIT C9 · color de la plataforma en cada cuenta@@
+@@FIND@@
+<h3 className="text-base font-semibold">{c.servicio || 'Servicio'}</h3>
+@@REPLACE@@
+<h3 className="text-base font-semibold flex items-center gap-2"><ServicioPunto servicio={c.servicio} />{c.servicio || 'Servicio'}</h3>
+@@END@@
+
+@@EDIT C10 · ahorro visible@@
+@@FIND@@
+<BarraDias adquisicion={c.fecha_adquisicion} vencimiento={c.fecha_vencimiento} dark={darkMode} />
+@@REPLACE@@
+<BarraDias adquisicion={c.fecha_adquisicion} vencimiento={c.fecha_vencimiento} precio={c.precio_suscripcion} dark={darkMode} />
+@@END@@
+
+@@EDIT C11 · el precio también llega a Mis cuentas@@
+@@FIND@@
+.select('id, servicio, perfil_asignado, pin_perfil, correo_cuenta, contrasena_cuenta, fecha_adquisicion, fecha_vencimiento, panel_url, panel_usuario, panel_id, entregado_at')
+@@REPLACE@@
+.select('id, servicio, perfil_asignado, pin_perfil, correo_cuenta, contrasena_cuenta, fecha_adquisicion, fecha_vencimiento, panel_url, panel_usuario, panel_id, entregado_at, precio_suscripcion')
+@@END@@
+
+@@EDIT C12 · barra inferior en el celular@@
+@@FIND@@
+{renovarCta && user?.uid && (
+@@REPLACE@@
+<NavInferior tab={tab} setTab={setTab} dark={darkMode} />
+
+      {renovarCta && user?.uid && (
+@@END@@
+
+@@EDIT C13 · espacio para la barra inferior@@
+@@FIND@@
+className={`min-h-screen transition-colors duration-200 p-4 sm:p-8 ${ui.page}`}
+@@REPLACE@@
+className={`min-h-screen transition-colors duration-200 p-4 pb-24 sm:p-8 ${ui.page}`}
+@@END@@
+
+@@EDIT C14 · menú superior solo en pantallas grandes@@
+@@FIND@@
+<nav className={`flex overflow-x-auto gap-1 border-b ${ui.border}`}>
+@@REPLACE@@
+<nav className={`hidden sm:flex overflow-x-auto gap-1 border-b ${ui.border}`}>
+@@END@@
+
+@@FILE src/app/admin/dashboard/page.tsx@@
+@@MARCA useDeshacer@@
+@@EDIT P1 · imports nuevos@@
+@@FIND@@
+import CentroLink from '@/components/admin/CentroLink'
+@@REPLACE@@
+import CentroLink from '@/components/admin/CentroLink'
+import ClienteMovil, { MadreMovil } from '@/components/admin/TarjetasMovil'
+import MoverClientes from '@/components/admin/MoverClientes'
+import { useTema } from '@/lib/useTema'
+import { useDeshacer, estaPendiente } from '@/lib/deshacer'
+import { exportarCSV } from '@/lib/csv'
+import { enlaceCobro } from '@/lib/cobro'
+@@END@@
+
+@@EDIT P2 · iconos nuevos@@
+@@FIND@@
+UserMinus, ChevronDown, Dices, Wallet, History
+@@REPLACE@@
+UserMinus, ChevronDown, Dices, Wallet, History, MessageCircle, ArrowRightLeft, Download
+@@END@@
+
+@@EDIT P3 · modo oscuro recordado@@
+@@FIND@@
+const [darkMode, setDarkMode] = useState(false)
+@@REPLACE@@
+const [darkMode, setDarkMode] = useTema()
+@@END@@
+
+@@EDIT P4 · deshacer, mover clientes y buscador global@@
+@@FIND@@
+const router = useRouter()
+  const supabase = createClient()
+@@REPLACE@@
+const router = useRouter()
+  const supabase = createClient()
+  const [programarDeshacer, nodoDeshacer] = useDeshacer(darkMode)
+  const [moverMadre, setMoverMadre] = useState<any>(null)
+
+  // Buscador global (Ctrl + K) y enlaces con ?q=
+  useEffect(() => {
+    const aplicar = (q: string, t?: string) => {
+      if (t === 'madres' || t === 'clientes') setTab(t)
+      setFilter(q)
+    }
+    const p = new URLSearchParams(window.location.search)
+    if (p.get('q')) aplicar(p.get('q') || '', p.get('tab') || undefined)
+    const alBuscar = (e: Event) => {
+      const d = (e as CustomEvent).detail || {}
+      aplicar(String(d.q || ''), d.tab)
+    }
+    window.addEventListener('nexo-buscar', alBuscar)
+    return () => window.removeEventListener('nexo-buscar', alBuscar)
+  }, [])
+@@END@@
+
+@@EDIT P5 · lo que se está borrando no reaparece (clientes)@@
+@@FIND@@
+if (cCli) setCuentasClientes(cCli)
+@@REPLACE@@
+if (cCli) setCuentasClientes(cCli.filter((x: any) => !estaPendiente('cuentas_clientes', x.id)))
+@@END@@
+
+@@EDIT P6 · lo que se está borrando no reaparece (madres)@@
+@@FIND@@
+if (cMad) setCuentasMadre(cMad)
+@@REPLACE@@
+if (cMad) setCuentasMadre(cMad.filter((x: any) => !estaPendiente('cuentas_madre', x.id)))
+@@END@@
+
+@@EDIT P7 · lo que se está borrando no reaparece (precios)@@
+@@FIND@@
+if (sCat) setServicios(sCat)
+@@REPLACE@@
+if (sCat) setServicios(sCat.filter((x: any) => !estaPendiente('servicios_catalogo', x.id)))
+@@END@@
+
+@@EDIT P8 · exportar a Excel@@
+@@FIND@@
+const handleSincronizar = async () => {
+@@REPLACE@@
+const exportarTodo = () => {
+    if (!confirm('Los archivos incluyen correos y contraseñas de las cuentas. Guárdalos en un lugar seguro.\n\n¿Descargar el respaldo?')) return
+    exportarCSV('clientes', cuentasClientes.map((c) => ({
+      Nombre: c.nombre_completo, Servicio: c.servicio, Perfil: c.perfil_asignado, PIN: c.pin_perfil,
+      Correo: c.correo_cuenta, Contrasena: c.contrasena_cuenta, Precio: c.precio_suscripcion,
+      Adquisicion: c.fecha_adquisicion, Vencimiento: c.fecha_vencimiento, WhatsApp: c.telefono,
+    })))
+    exportarCSV('cuentas-madre', cuentasMadre.map((m) => ({
+      Proveedor: m.proveedor, Servicio: m.servicio, Correo: m.correo, Contrasena: m.contrasena,
+      Perfiles: m.max_perfiles, Costo: m.costo, Adquisicion: m.fecha_adquisicion, Vencimiento: m.fecha_vencimiento,
+    })))
+  }
+
+  const handleSincronizar = async () => {
+@@END@@
+
+@@EDIT P9 · borrar con Deshacer@@
+@@FIND@@
+const handleDelete = async (table: string, id: any) => {
+    if (confirm('¿Deseas eliminar este registro?')) {
+@@REPLACE@@
+// Borrado con "Deshacer": se oculta de inmediato y se borra de verdad a los 8 segundos
+  const handleDelete = (table: string, id: any) => {
+    const setter = table === 'cuentas_clientes' ? setCuentasClientes : table === 'cuentas_madre' ? setCuentasMadre : setServicios
+    const lista: any[] = table === 'cuentas_clientes' ? cuentasClientes : table === 'cuentas_madre' ? cuentasMadre : servicios
+    const previo = lista.find((x) => x.id === id)
+    if (!previo) return
+    programarDeshacer({
+      tabla: table,
+      id,
+      texto: 'Registro eliminado',
+      ocultar: () => setter((prev: any[]) => prev.filter((x) => x.id !== id)),
+      ejecutar: () => borrarDeVerdad(table, id),
+      revertir: () => setter((prev: any[]) => (prev.some((x) => x.id === id) ? prev : [previo, ...prev])),
+    })
+  }
+
+  const borrarDeVerdad = async (table: string, id: any) => {
+    {
+@@END@@
+
+@@EDIT P10 · encabezado: exportar en lugar de enlaces repetidos (ya están en el menú fijo)@@
+@@FIND@@
+<Link href="/admin/reportes" className={ui.btnGhost}>
+              <ExternalLink size={16} /> <span>Vista de reportes</span>
+            </Link>
+            <Link href="/admin/pagos" className={ui.btnGhost}>
+              <Wallet size={16} /> <span>Pagos</span>
+            </Link>
+            <Link href="/admin/bitacora" className={ui.btnGhost}>
+              <History size={16} /> <span>Bitácora</span>
+            </Link>
+            <CentroLink dark={darkMode} />
+@@REPLACE@@
+<button onClick={exportarTodo} className={ui.btnGhost} title="Descargar un respaldo en Excel (CSV)">
+              <Download size={16} /> <span className="hidden sm:inline">Exportar</span>
+            </button>
+@@END@@
+
+@@EDIT P11 · clientes como tarjetas en el celular@@
+@@FIND@@
+<div className="overflow-x-auto">
+                <table className="w-full text-left text-sm min-w-[1100px]">
+@@REPLACE@@
+<div className="md:hidden p-3 space-y-3">
+                {clientesVisibles.map((item: any) => (
+                  <ClienteMovil
+                    key={item.id}
+                    item={item}
+                    dark={darkMode}
+                    destino={item.usuario_id ? perfilesPorId[item.usuario_id] : null}
+                    copiado={copiedId === item.id}
+                    onEnviar={() => abrirEnviar(item)}
+                    onRenovar={() => setRenovarItem(item)}
+                    onCopiar={() => handleCopiarDatosCliente(item)}
+                    onEditar={() => { setEditingItem(item); setFormData(item); setIsModalOpen(true) }}
+                    onBorrar={() => handleDelete('cuentas_clientes', item.id)}
+                    onLiberar={() => handleLiberar(item)}
+                  />
+                ))}
+              </div>
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-sm min-w-[1100px]">
+@@END@@
+
+@@EDIT P12 · cuentas madre como tarjetas en el celular@@
+@@FIND@@
+<div className="overflow-x-auto">
+                <table className="w-full text-left text-sm min-w-[900px]">
+@@REPLACE@@
+<div className="md:hidden p-3 space-y-3">
+                {madresVisibles.map((item: any) => (
+                  <MadreMovil
+                    key={item.id}
+                    item={item}
+                    dark={darkMode}
+                    clientes={cuentasClientes.filter((c) => String(c.cuenta_madre_id) === String(item.id))}
+                    onEditar={() => { setEditingItem(item); setFormData(item); setIsModalOpen(true) }}
+                    onMover={() => setMoverMadre(item)}
+                    onBorrar={() => handleDelete('cuentas_madre', item.id)}
+                  />
+                ))}
+              </div>
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-sm min-w-[900px]">
+@@END@@
+
+@@EDIT P13 · cobrar por WhatsApp@@
+@@FIND@@
+<RefreshCw size={14} /> Renovar
+                              </button>
+@@REPLACE@@
+<RefreshCw size={14} /> Renovar
+                              </button>
+                              <a href={enlaceCobro(item)} target="_blank" rel="noopener noreferrer" className={ui.iconBtn} title="Cobrar por WhatsApp" aria-label="Cobrar por WhatsApp">
+                                <MessageCircle size={16} />
+                              </a>
+@@END@@
+
+@@EDIT P14 · mover clientes de una cuenta madre a otra@@
+@@FIND@@
+<button onClick={() => handleDelete('cuentas_madre', item.id)}
+@@REPLACE@@
+<button onClick={() => setMoverMadre(item)} className={ui.iconBtn} title="Mover clientes a otra cuenta" aria-label="Mover clientes">
+                                <ArrowRightLeft size={16} />
+                              </button>
+                              <button onClick={() => handleDelete('cuentas_madre', item.id)}
+@@END@@
+
+@@EDIT P15 · WhatsApp del cliente (guardar)@@
+@@FIND@@
+if (formData.correo) payload.correo = formData.correo
+@@REPLACE@@
+if (formData.correo) payload.correo = formData.correo
+      payload.telefono = String(formData.telefono || '').replace(/\D/g, '') || null
+@@END@@
+
+@@EDIT P16 · WhatsApp del cliente (campo)@@
+@@FIND@@
+Registrar el pago inicial en el historial de pagos
+                      </label>
+                    )}
+@@REPLACE@@
+Registrar el pago inicial en el historial de pagos
+                      </label>
+                    )}
+                    <Field dark={darkMode} label="WhatsApp del cliente (opcional)">
+                      <input type="tel" placeholder="10 dígitos" value={formData.telefono || ''} onChange={(e) => setFormData({...formData, telefono: e.target.value})} className={ui.input} />
+                    </Field>
+@@END@@
+
+@@EDIT P17 · costo de la cuenta madre (campo)@@
+@@FIND@@
+<Field dark={darkMode} label="Perfiles disponibles *">
+@@REPLACE@@
+<Field dark={darkMode} label="Costo por mes (lo que pagaste)">
+                      <input type="number" min="0" step="0.01" placeholder="Opcional" value={formData.costo ?? ''} onChange={(e) => setFormData({...formData, costo: e.target.value})} className={ui.input} />
+                    </Field>
+                    <Field dark={darkMode} label="Perfiles disponibles *">
+@@END@@
+
+@@EDIT P18 · costo de la cuenta madre (guardar)@@
+@@FIND@@
+payload.max_perfiles = Number(formData.max_perfiles) || perfilesPorDefecto(servicio)
+@@REPLACE@@
+payload.max_perfiles = Number(formData.max_perfiles) || perfilesPorDefecto(servicio)
+      payload.costo = formData.costo === '' || formData.costo == null ? null : Number(formData.costo)
+@@END@@
+
+@@EDIT P19 · ventanas nuevas@@
+@@FIND@@
+{renovarItem && (
+@@REPLACE@@
+{moverMadre && (
+          <MoverClientes
+            madre={moverMadre}
+            madres={cuentasMadre}
+            clientes={cuentasClientes}
+            dark={darkMode}
+            onClose={() => setMoverMadre(null)}
+            onDone={async (t: string) => { setMoverMadre(null); await loadAllData(); mostrarToast('ok', t) }}
+          />
+        )}
+        {nodoDeshacer}
+
+        {renovarItem && (
+@@END@@
+

@@ -9,6 +9,7 @@ import { dinero } from '@/lib/extras'
 import { comprimirImagen, redondear } from '@/lib/utilidades'
 import { notificarAdmins } from '@/lib/pushCliente'
 import { PAGO, DESCUENTO_MESES, WHATSAPP_ADMIN } from '@/lib/config'
+import { nivelPorMeses, mesesDesde } from '@/lib/configExtra'
 
 type Props = {
   cuenta: any
@@ -27,6 +28,8 @@ export default function RenovarCliente({ cuenta, uid, perfil, dark, onClose, onD
   const unitario = Number(cuenta.precio_suscripcion) || 0
 
   const [meses, setMeses] = useState(1)
+  const [extra, setExtra] = useState(0)
+  const [nombreNivel, setNombreNivel] = useState('')
   const [monto, setMonto] = useState<number | string>(redondear(unitario * (1 - (DESCUENTO_MESES[1] || 0))))
   const [nota, setNota] = useState('')
   const [archivo, setArchivo] = useState<File | null>(null)
@@ -47,9 +50,28 @@ export default function RenovarCliente({ cuenta, uid, perfil, dark, onClose, onD
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cuenta.id])
 
+  // Descuento por plan + descuento extra por antigüedad
+  const descuento = (m: number) => (DESCUENTO_MESES[m] || 0) + extra
+
+  useEffect(() => {
+    supabase
+      .from('cuentas_clientes')
+      .select('fecha_adquisicion')
+      .eq('usuario_id', uid)
+      .order('fecha_adquisicion', { ascending: true })
+      .limit(1)
+      .then(({ data }: any) => {
+        const nivel = nivelPorMeses(data?.[0]?.fecha_adquisicion ? mesesDesde(data[0].fecha_adquisicion) : 0).actual
+        setExtra(nivel.extra)
+        setNombreNivel(nivel.nombre)
+        setMonto(redondear(unitario * (1 - ((DESCUENTO_MESES[1] || 0) + nivel.extra))))
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid])
+
   const elegirMeses = (m: number) => {
     setMeses(m)
-    setMonto(redondear(unitario * m * (1 - (DESCUENTO_MESES[m] || 0))))
+    setMonto(redondear(unitario * m * (1 - descuento(m))))
   }
 
   const elegirArchivo = (f: File | null) => {
@@ -126,9 +148,10 @@ export default function RenovarCliente({ cuenta, uid, perfil, dark, onClose, onD
 
         <div className="space-y-2">
           <p className="text-sm font-semibold">1. Elige cuánto tiempo</p>
+          {extra > 0 && <p className={`text-xs ${dark ? 'text-emerald-300' : 'text-emerald-700'}`}>Tu nivel “{nombreNivel}” te da {Math.round(extra * 100)}% extra de descuento.</p>}
           <div className="grid grid-cols-3 gap-2">
             {opciones.map((m) => {
-              const desc = DESCUENTO_MESES[m] || 0
+              const desc = descuento(m)
               const activo = meses === m
               return (
                 <button
@@ -162,7 +185,7 @@ export default function RenovarCliente({ cuenta, uid, perfil, dark, onClose, onD
           <label className="block space-y-1">
             <span className={`text-xs font-medium ${dark ? 'text-slate-300' : 'text-slate-600'}`}>Monto que pagaste (MXN)</span>
             <input type="number" min="0" step="0.01" value={monto} onChange={(e) => setMonto(e.target.value)} className={ui.input} />
-            {unitario > 0 && <span className={`text-[11px] ${ui.muted}`}>Total sugerido: {dinero(redondear(unitario * meses * (1 - (DESCUENTO_MESES[meses] || 0))))}</span>}
+            {unitario > 0 && <span className={`text-[11px] ${ui.muted}`}>Total sugerido: {dinero(redondear(unitario * meses * (1 - descuento(meses))))}</span>}
           </label>
         </div>
 

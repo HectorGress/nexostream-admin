@@ -25,6 +25,13 @@ import GuiaSoporte from '@/components/GuiaSoporte'
 import BarraDias from '@/components/BarraDias'
 import ChatReporte, { CalificarReporte } from '@/components/ChatReporte'
 import { notificarAdmins } from '@/lib/pushCliente'
+import PrimerosPasos from '@/components/PrimerosPasos'
+import NavInferior from '@/components/NavInferior'
+import NivelCliente from '@/components/NivelCliente'
+import EstadoServicios from '@/components/EstadoServicios'
+import PedirServicio from '@/components/PedirServicio'
+import ServicioPunto from '@/components/ServicioPunto'
+import { useTema } from '@/lib/useTema'
 
 /* ───────────────────────── Helpers visuales ───────────────────────── */
 
@@ -109,7 +116,7 @@ export default function ClienteDashboard() {
   const [catalogo, setCatalogo] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
-  const [darkMode, setDarkMode] = useState(false)
+  const [darkMode, setDarkMode] = useTema()
   const [tab, setTab] = useState<'inicio' | 'cuentas' | 'pagos' | 'soporte'>('inicio')
 
   // Perfil del cliente (nombre + ID único)
@@ -237,7 +244,7 @@ export default function ClienteDashboard() {
   const loadMisCuentas = async (uid: string) => {
     const { data, error } = await supabase
       .from('cuentas_clientes')
-      .select('id, servicio, perfil_asignado, pin_perfil, correo_cuenta, contrasena_cuenta, fecha_adquisicion, fecha_vencimiento, panel_url, panel_usuario, panel_id, entregado_at')
+      .select('id, servicio, perfil_asignado, pin_perfil, correo_cuenta, contrasena_cuenta, fecha_adquisicion, fecha_vencimiento, panel_url, panel_usuario, panel_id, entregado_at, precio_suscripcion')
       .eq('usuario_id', uid)
       .order('fecha_vencimiento', { ascending: true })
     if (error) console.error('Error cargando mis cuentas:', error)
@@ -484,7 +491,7 @@ export default function ClienteDashboard() {
   }
 
   return (
-    <div className={`min-h-screen transition-colors duration-200 p-4 sm:p-8 ${ui.page}`}>
+    <div className={`min-h-screen transition-colors duration-200 p-4 pb-24 sm:p-8 ${ui.page}`}>
       <div className="max-w-6xl mx-auto space-y-6">
 
         {/* Header Cliente + Switcher Tema */}
@@ -544,7 +551,7 @@ export default function ClienteDashboard() {
         )}
 
         {/* Navegación */}
-        <nav className={`flex overflow-x-auto gap-1 border-b ${ui.border}`}>
+        <nav className={`hidden sm:flex overflow-x-auto gap-1 border-b ${ui.border}`}>
           {tabs.map((t) => {
             const active = tab === t.id
             return (
@@ -574,7 +581,9 @@ export default function ClienteDashboard() {
         {/* ═══════════════ INICIO ═══════════════ */}
         {tab === 'inicio' && (
           <>
+            <PrimerosPasos dark={darkMode} perfil={perfil} cuentas={misCuentas} onPerfil={abrirPerfil} />
             <AvisosBanner dark={darkMode} />
+            <EstadoServicios dark={darkMode} />
 
             {/* Tarjeta de Pago Klar */}
             <section className="rounded-2xl p-5 sm:p-6 text-white bg-gradient-to-r from-indigo-600 to-blue-600 shadow-lg shadow-indigo-600/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -631,13 +640,14 @@ export default function ClienteDashboard() {
               />
             </section>
 
+            {user?.uid && <NivelCliente uid={user.uid} dark={darkMode} />}
             <ArmaTuCombo catalogo={catalogo} perfil={perfil} dark={darkMode} />
             {user?.uid && <ReferidosCard uid={user.uid} perfil={perfil} dark={darkMode} />}
 
             {/* Combos Terroríficos */}
             <section className="space-y-3">
               <h2 className="text-lg font-semibold flex items-center gap-2">
-                🎃 Combos terroríficos de octubre
+                Combos del mes
               </h2>
               {combos.length === 0 ? (
                 <div className={`border rounded-2xl ${ui.card}`}>
@@ -660,7 +670,7 @@ export default function ClienteDashboard() {
             {/* Precios por Perfil y Cuentas Completas */}
             <section className="grid md:grid-cols-2 gap-6">
               <div className={`p-5 rounded-2xl border space-y-3 ${ui.card}`}>
-                <h3 className="font-semibold">🍿 Precios por perfil (1 mes)</h3>
+                <h3 className="font-semibold">Precios por perfil · 1 mes</h3>
                 {porPerfil.length === 0 ? (
                   <EmptyState dark={darkMode} icon={UserRound} title="Sin precios por perfil" text="Cuando el administrador los publique, los verás aquí." />
                 ) : (
@@ -668,7 +678,7 @@ export default function ClienteDashboard() {
                     {porPerfil.map((p) => (
                       <div key={p.id} className="py-2.5 flex justify-between items-center text-sm">
                         <span className="font-medium">{p.nombre}</span>
-                        <span className={`font-bold ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>${p.precio} MXN</span>
+                        <PedirServicio item={p} uid={user?.uid} perfil={perfil} dark={darkMode} />
                       </div>
                     ))}
                   </div>
@@ -676,7 +686,7 @@ export default function ClienteDashboard() {
               </div>
 
               <div className={`p-5 rounded-2xl border space-y-3 ${ui.card}`}>
-                <h3 className="font-semibold">👑 Cuentas completas exclusivas</h3>
+                <h3 className="font-semibold">Cuentas completas</h3>
                 {completas.length === 0 ? (
                   <EmptyState dark={darkMode} icon={Crown} title="Sin cuentas completas" text="Cuando el administrador las publique, las verás aquí." />
                 ) : (
@@ -759,9 +769,9 @@ export default function ClienteDashboard() {
                     <article key={c.id} className={`p-5 rounded-2xl border space-y-3 ${ui.card}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <h3 className="text-base font-semibold">{c.servicio || 'Servicio'}</h3>
+                          <h3 className="text-base font-semibold flex items-center gap-2"><ServicioPunto servicio={c.servicio} />{c.servicio || 'Servicio'}</h3>
                           <p className={`text-xs ${ui.muted}`}>{textoDias(estado.dias)} · {formatearFecha(c.fecha_vencimiento)}</p>
-                          <BarraDias adquisicion={c.fecha_adquisicion} vencimiento={c.fecha_vencimiento} dark={darkMode} />
+                          <BarraDias adquisicion={c.fecha_adquisicion} vencimiento={c.fecha_vencimiento} precio={c.precio_suscripcion} dark={darkMode} />
                         </div>
                         <Pill dark={darkMode} tone={estado.tone}>{etiqueta}</Pill>
                       </div>
@@ -1036,6 +1046,8 @@ export default function ClienteDashboard() {
       </div>
 
       {/* ═══════════════ MODAL: Mi perfil (nombre + ID único) ═══════════════ */}
+      <NavInferior tab={tab} setTab={setTab} dark={darkMode} />
+
       {renovarCta && user?.uid && (
         <RenovarCliente
           cuenta={renovarCta}

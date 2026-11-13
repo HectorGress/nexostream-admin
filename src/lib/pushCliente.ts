@@ -19,5 +19,5 @@ export const notificarUsuario = (uid: string, titulo: string, cuerpo: string, ur
   enviar({ modo: 'usuario', uid, titulo, cuerpo, url })
 
 // Cliente -> todos los administradores
-export const notificarAdmins = (evento: 'solicitud' | 'reporte' | 'mensaje', detalle: string) =>
+export const notificarAdmins = (evento: 'solicitud' | 'reporte' | 'mensaje' | 'pedido', detalle: string) =>
   enviar({ modo: 'admins', evento, detalle })

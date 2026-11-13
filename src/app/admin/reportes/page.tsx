@@ -11,6 +11,7 @@ import type { LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 import ChatReporte, { CalificarReporte } from '@/components/ChatReporte'
 import { notificarUsuario } from '@/lib/pushCliente'
+import { useTema } from '@/lib/useTema'
 
 /* ───────────────────────── Helpers (sin lógica de negocio) ───────────────────────── */
 
@@ -70,7 +71,7 @@ const KpiCard = ({
 /* ───────────────────────── Página ───────────────────────── */
 
 export default function AdminReportesPage() {
-  const [darkMode, setDarkMode] = useState(false)
+  const [darkMode, setDarkMode] = useTema()
   const [reportes, setReportes] = useState<any[]>([])
   const [soluciones, setSoluciones] = useState<{ [key: number]: string }>({})
   const [cargando, setCargando] = useState(true)

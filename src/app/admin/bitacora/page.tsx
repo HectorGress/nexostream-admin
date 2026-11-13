@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, RefreshCw, Sun, Moon, History } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { useAdminGuard } from '@/lib/useAdminGuard'
+import { useTema } from '@/lib/useTema'
 import { makeUi, toneClasses, Pill, Skeleton } from '@/lib/ui'
 import type { Tone } from '@/lib/cuentas'
 
@@ -20,7 +21,7 @@ export default function BitacoraPage() {
   const autorizado = useAdminGuard()
   const supabase = createClient()
 
-  const [darkMode, setDarkMode] = useState(false)
+  const [darkMode, setDarkMode] = useTema()
   const [registros, setRegistros] = useState<any[]>([])
   const [filtroAccion, setFiltroAccion] = useState('todas')
   const [filtroAdmin, setFiltroAdmin] = useState('todos')

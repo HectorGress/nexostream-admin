@@ -24,6 +24,7 @@ export default function ChatReporte({ reporteId, rol, nombre, destinoUid, dark }
   const [texto, setTexto] = useState('')
   const [enviando, setEnviando] = useState(false)
   const fin = useRef<HTMLDivElement | null>(null)
+  const [rapidas, setRapidas] = useState<any[]>([])
 
   const cargar = async () => {
     const { data } = await supabase
@@ -62,6 +63,24 @@ export default function ChatReporte({ reporteId, rol, nombre, destinoUid, dark }
   useEffect(() => {
     if (abierto) fin.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   }, [mensajes, abierto])
+
+  // Respuestas rápidas guardadas (solo administrador)
+  const cargarRapidas = async () => {
+    const { data } = await supabase.from('respuestas_rapidas').select('*').order('id', { ascending: true })
+    setRapidas(data || [])
+  }
+  useEffect(() => {
+    if (abierto && rol === 'admin') cargarRapidas()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abierto, rol])
+
+  const guardarRapida = async () => {
+    const titulo = prompt('Nombre corto para esta respuesta (ej. "Reiniciar sesión"):')
+    if (!titulo || !titulo.trim()) return
+    const { error } = await supabase.from('respuestas_rapidas').insert([{ titulo: titulo.trim(), texto: texto.trim() }])
+    if (error) { alert(`❌ ${error.message}`); return }
+    cargarRapidas()
+  }
 
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -113,6 +132,27 @@ export default function ChatReporte({ reporteId, rol, nombre, destinoUid, dark }
             })}
             <div ref={fin} />
           </div>
+
+          {rol === 'admin' && (
+            <div className="flex flex-wrap items-center gap-3">
+              <select
+                value=""
+                onChange={(e) => {
+                  const r = rapidas.find((x) => String(x.id) === e.target.value)
+                  if (r) setTexto(r.texto)
+                }}
+                className={`${ui.input} sm:w-auto`}
+              >
+                <option value="">Respuestas rápidas…</option>
+                {rapidas.map((r) => <option key={r.id} value={r.id}>{r.titulo}</option>)}
+              </select>
+              {texto.trim().length > 8 && (
+                <button type="button" onClick={guardarRapida} className={`text-xs font-semibold underline underline-offset-2 ${dark ? 'text-indigo-300' : 'text-indigo-700'}`}>
+                  Guardar este mensaje como respuesta
+                </button>
+              )}
+            </div>
+          )}
 
           <form onSubmit={enviar} className="flex gap-2">
             <input type="text" value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Escribe un mensaje..." className={ui.input} />

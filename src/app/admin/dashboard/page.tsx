@@ -17,12 +17,18 @@ import {
   Sun, Moon, LogOut, Users, Server, Tag, LifeBuoy, Search, Plus, Copy, Check,
   Pencil, Trash2, Clock, Inbox, X, RefreshCw, ExternalLink, SearchX, Loader2,
   Send, FileText, FileImage, Unlink, Globe, UserCheck,
-  UserMinus, ChevronDown, Dices, Wallet, History
+  UserMinus, ChevronDown, Dices, Wallet, History, MessageCircle, ArrowRightLeft, Download
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import RenovarModal from '@/components/RenovarModal'
 import PushActivar from '@/components/PushActivar'
 import CentroLink from '@/components/admin/CentroLink'
+import ClienteMovil, { MadreMovil } from '@/components/admin/TarjetasMovil'
+import MoverClientes from '@/components/admin/MoverClientes'
+import { useTema } from '@/lib/useTema'
+import { useDeshacer, estaPendiente } from '@/lib/deshacer'
+import { exportarCSV } from '@/lib/csv'
+import { enlaceCobro } from '@/lib/cobro'
 import ChatReporte, { CalificarReporte } from '@/components/ChatReporte'
 import { notificarUsuario } from '@/lib/pushCliente'
 import {
@@ -113,7 +119,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('')
   const [selectedServicio, setSelectedServicio] = useState('Todos')
-  const [darkMode, setDarkMode] = useState(false)
+  const [darkMode, setDarkMode] = useTema()
   const [copiedId, setCopiedId] = useState<string | number | null>(null)
   const [guardando, setGuardando] = useState(false)
   const [sincronizando, setSincronizando] = useState(false)
@@ -160,6 +166,24 @@ export default function AdminDashboard() {
 
   const router = useRouter()
   const supabase = createClient()
+  const [programarDeshacer, nodoDeshacer] = useDeshacer(darkMode)
+  const [moverMadre, setMoverMadre] = useState<any>(null)
+
+  // Buscador global (Ctrl + K) y enlaces con ?q=
+  useEffect(() => {
+    const aplicar = (q: string, t?: string) => {
+      if (t === 'madres' || t === 'clientes') setTab(t)
+      setFilter(q)
+    }
+    const p = new URLSearchParams(window.location.search)
+    if (p.get('q')) aplicar(p.get('q') || '', p.get('tab') || undefined)
+    const alBuscar = (e: Event) => {
+      const d = (e as CustomEvent).detail || {}
+      aplicar(String(d.q || ''), d.tab)
+    }
+    window.addEventListener('nexo-buscar', alBuscar)
+    return () => window.removeEventListener('nexo-buscar', alBuscar)
+  }, [])
 
   const serviciosFiltro = [
     'Todos', 'Netflix', 'Max / HBO Max', 'Disney+', 'Prime Video', 'ViX', 
@@ -235,9 +259,9 @@ export default function AdminDashboard() {
     const { data: rep } = await supabase.from('reportes').select('*').order('created_at', { ascending: false })
     const { data: perf } = await supabase.from('profiles').select('id, nombre, correo, cliente_id, rol').order('created_at', { ascending: false })
 
-    if (cCli) setCuentasClientes(cCli)
-    if (cMad) setCuentasMadre(cMad)
-    if (sCat) setServicios(sCat)
+    if (cCli) setCuentasClientes(cCli.filter((x: any) => !estaPendiente('cuentas_clientes', x.id)))
+    if (cMad) setCuentasMadre(cMad.filter((x: any) => !estaPendiente('cuentas_madre', x.id)))
+    if (sCat) setServicios(sCat.filter((x: any) => !estaPendiente('servicios_catalogo', x.id)))
     if (perf) setPerfiles(perf)
     if (rep) {
       setReportes(rep)
@@ -251,6 +275,19 @@ export default function AdminDashboard() {
       })
     }
     setUltimaSync(new Date())
+  }
+
+  const exportarTodo = () => {
+    if (!confirm('Los archivos incluyen correos y contraseñas de las cuentas. Guárdalos en un lugar seguro.\n\n¿Descargar el respaldo?')) return
+    exportarCSV('clientes', cuentasClientes.map((c) => ({
+      Nombre: c.nombre_completo, Servicio: c.servicio, Perfil: c.perfil_asignado, PIN: c.pin_perfil,
+      Correo: c.correo_cuenta, Contrasena: c.contrasena_cuenta, Precio: c.precio_suscripcion,
+      Adquisicion: c.fecha_adquisicion, Vencimiento: c.fecha_vencimiento, WhatsApp: c.telefono,
+    })))
+    exportarCSV('cuentas-madre', cuentasMadre.map((m) => ({
+      Proveedor: m.proveedor, Servicio: m.servicio, Correo: m.correo, Contrasena: m.contrasena,
+      Perfiles: m.max_perfiles, Costo: m.costo, Adquisicion: m.fecha_adquisicion, Vencimiento: m.fecha_vencimiento,
+    })))
   }
 
   const handleSincronizar = async () => {
@@ -342,6 +379,7 @@ export default function AdminDashboard() {
       if (formData.pin_perfil) payload.pin_perfil = String(formData.pin_perfil).trim()
       if (precioNum !== null) payload.precio_suscripcion = precioNum
       if (formData.correo) payload.correo = formData.correo
+      payload.telefono = String(formData.telefono || '').replace(/\D/g, '') || null
       if (formData.contrasena) payload.contrasena = formData.contrasena
 
       // Cupo: la cuenta madre elegida debe tener perfiles libres
@@ -398,6 +436,7 @@ export default function AdminDashboard() {
       }
       if (formData.codigo_panel) payload.codigo_panel = formData.codigo_panel
       payload.max_perfiles = Number(formData.max_perfiles) || perfilesPorDefecto(servicio)
+      payload.costo = formData.costo === '' || formData.costo == null ? null : Number(formData.costo)
 
       ejecutar = async () => editingItem?.id
         ? supabase.from('cuentas_madre').update(payload).eq('id', editingItem.id)
@@ -466,8 +505,24 @@ export default function AdminDashboard() {
     setGuardando(false)
   }
 
-  const handleDelete = async (table: string, id: any) => {
-    if (confirm('¿Deseas eliminar este registro?')) {
+  // Borrado con "Deshacer": se oculta de inmediato y se borra de verdad a los 8 segundos
+  const handleDelete = (table: string, id: any) => {
+    const setter = table === 'cuentas_clientes' ? setCuentasClientes : table === 'cuentas_madre' ? setCuentasMadre : setServicios
+    const lista: any[] = table === 'cuentas_clientes' ? cuentasClientes : table === 'cuentas_madre' ? cuentasMadre : servicios
+    const previo = lista.find((x) => x.id === id)
+    if (!previo) return
+    programarDeshacer({
+      tabla: table,
+      id,
+      texto: 'Registro eliminado',
+      ocultar: () => setter((prev: any[]) => prev.filter((x) => x.id !== id)),
+      ejecutar: () => borrarDeVerdad(table, id),
+      revertir: () => setter((prev: any[]) => (prev.some((x) => x.id === id) ? prev : [previo, ...prev])),
+    })
+  }
+
+  const borrarDeVerdad = async (table: string, id: any) => {
+    {
       const previo: any = table === 'cuentas_clientes'
         ? cuentasClientes.find((c) => c.id === id)
         : table === 'cuentas_madre' ? cuentasMadre.find((m) => m.id === id) : null
@@ -855,16 +910,9 @@ export default function AdminDashboard() {
               <RefreshCw size={16} className={sincronizando ? 'animate-spin' : ''} />
               <span className="hidden sm:inline">Actualizar</span>
             </button>
-            <Link href="/admin/reportes" className={ui.btnGhost}>
-              <ExternalLink size={16} /> <span>Vista de reportes</span>
-            </Link>
-            <Link href="/admin/pagos" className={ui.btnGhost}>
-              <Wallet size={16} /> <span>Pagos</span>
-            </Link>
-            <Link href="/admin/bitacora" className={ui.btnGhost}>
-              <History size={16} /> <span>Bitácora</span>
-            </Link>
-            <CentroLink dark={darkMode} />
+            <button onClick={exportarTodo} className={ui.btnGhost} title="Descargar un respaldo en Excel (CSV)">
+              <Download size={16} /> <span className="hidden sm:inline">Exportar</span>
+            </button>
             <PushActivar dark={darkMode} rol="admin" />
             <button onClick={() => setDarkMode(!darkMode)} className={ui.btnGhost}>
               {darkMode ? <Sun size={16} /> : <Moon size={16} />}
@@ -1005,7 +1053,24 @@ export default function AdminDashboard() {
                 action={emptyAction}
               />
             ) : (
-              <div className="overflow-x-auto">
+              <div className="md:hidden p-3 space-y-3">
+                {clientesVisibles.map((item: any) => (
+                  <ClienteMovil
+                    key={item.id}
+                    item={item}
+                    dark={darkMode}
+                    destino={item.usuario_id ? perfilesPorId[item.usuario_id] : null}
+                    copiado={copiedId === item.id}
+                    onEnviar={() => abrirEnviar(item)}
+                    onRenovar={() => setRenovarItem(item)}
+                    onCopiar={() => handleCopiarDatosCliente(item)}
+                    onEditar={() => { setEditingItem(item); setFormData(item); setIsModalOpen(true) }}
+                    onBorrar={() => handleDelete('cuentas_clientes', item.id)}
+                    onLiberar={() => handleLiberar(item)}
+                  />
+                ))}
+              </div>
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left text-sm min-w-[1100px]">
                   <thead className={`${ui.thead} border-b text-xs font-semibold`}>
                     <tr>
@@ -1076,6 +1141,9 @@ export default function AdminDashboard() {
                               >
                                 <RefreshCw size={14} /> Renovar
                               </button>
+                              <a href={enlaceCobro(item)} target="_blank" rel="noopener noreferrer" className={ui.iconBtn} title="Cobrar por WhatsApp" aria-label="Cobrar por WhatsApp">
+                                <MessageCircle size={16} />
+                              </a>
                               {semaforo.label === 'Vencida' && item.cuenta_madre_id && (
                                 <button
                                   onClick={() => handleLiberar(item)}
@@ -1127,7 +1195,20 @@ export default function AdminDashboard() {
                 action={emptyAction}
               />
             ) : (
-              <div className="overflow-x-auto">
+              <div className="md:hidden p-3 space-y-3">
+                {madresVisibles.map((item: any) => (
+                  <MadreMovil
+                    key={item.id}
+                    item={item}
+                    dark={darkMode}
+                    clientes={cuentasClientes.filter((c) => String(c.cuenta_madre_id) === String(item.id))}
+                    onEditar={() => { setEditingItem(item); setFormData(item); setIsModalOpen(true) }}
+                    onMover={() => setMoverMadre(item)}
+                    onBorrar={() => handleDelete('cuentas_madre', item.id)}
+                  />
+                ))}
+              </div>
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left text-sm min-w-[900px]">
                   <thead className={`${ui.thead} border-b text-xs font-semibold`}>
                     <tr>
@@ -1212,6 +1293,9 @@ export default function AdminDashboard() {
                             <div className="flex items-center justify-end gap-1 whitespace-nowrap">
                               <button onClick={() => { setEditingItem(item); setFormData(item); setIsModalOpen(true); }} className={ui.iconBtn} title="Editar" aria-label="Editar">
                                 <Pencil size={16} />
+                              </button>
+                              <button onClick={() => setMoverMadre(item)} className={ui.iconBtn} title="Mover clientes a otra cuenta" aria-label="Mover clientes">
+                                <ArrowRightLeft size={16} />
                               </button>
                               <button onClick={() => handleDelete('cuentas_madre', item.id)} className={`p-2 rounded-lg transition ${darkMode ? 'text-rose-300 hover:bg-rose-500/10' : 'text-rose-600 hover:bg-rose-50'}`} title="Eliminar" aria-label="Eliminar">
                                 <Trash2 size={16} />
@@ -1444,6 +1528,9 @@ export default function AdminDashboard() {
                         Registrar el pago inicial en el historial de pagos
                       </label>
                     )}
+                    <Field dark={darkMode} label="WhatsApp del cliente (opcional)">
+                      <input type="tel" placeholder="10 dígitos" value={formData.telefono || ''} onChange={(e) => setFormData({...formData, telefono: e.target.value})} className={ui.input} />
+                    </Field>
                     <div className="grid grid-cols-2 gap-3">
                       <Field dark={darkMode} label="Fecha de adquisición *">
                         <input type="date" required value={formData.fecha_adquisicion || ''} onChange={(e) => setFormData({...formData, fecha_adquisicion: e.target.value})} className={ui.input} />
@@ -1459,6 +1546,9 @@ export default function AdminDashboard() {
                   <>
                     <Field dark={darkMode} label="Proveedor *">
                       <input type="text" required placeholder="Proveedor" value={formData.proveedor || ''} onChange={(e) => setFormData({...formData, proveedor: e.target.value})} className={ui.input} />
+                    </Field>
+                    <Field dark={darkMode} label="Costo por mes (lo que pagaste)">
+                      <input type="number" min="0" step="0.01" placeholder="Opcional" value={formData.costo ?? ''} onChange={(e) => setFormData({...formData, costo: e.target.value})} className={ui.input} />
                     </Field>
                     <Field dark={darkMode} label="Perfiles disponibles *">
                       <input type="number" min="1" max="10" required value={formData.max_perfiles ?? perfilesPorDefecto(formData.servicio)} onChange={(e) => setFormData({...formData, max_perfiles: e.target.value})} className={ui.input} />
@@ -1750,6 +1840,18 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {moverMadre && (
+          <MoverClientes
+            madre={moverMadre}
+            madres={cuentasMadre}
+            clientes={cuentasClientes}
+            dark={darkMode}
+            onClose={() => setMoverMadre(null)}
+            onDone={async (t: string) => { setMoverMadre(null); await loadAllData(); mostrarToast('ok', t) }}
+          />
+        )}
+        {nodoDeshacer}
 
         {renovarItem && (
           <RenovarModal

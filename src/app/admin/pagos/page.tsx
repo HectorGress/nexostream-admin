@@ -6,6 +6,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Sun, Moon, Search, Wal
 import { createClient } from '@/lib/supabase'
 import { formatearFecha } from '@/lib/cuentas'
 import { useAdminGuard } from '@/lib/useAdminGuard'
+import { useTema } from '@/lib/useTema'
 import { makeUi, toneClasses, Skeleton } from '@/lib/ui'
 import { dinero } from '@/lib/extras'
 
@@ -13,7 +14,7 @@ export default function PagosPage() {
   const autorizado = useAdminGuard()
   const supabase = createClient()
 
-  const [darkMode, setDarkMode] = useState(false)
+  const [darkMode, setDarkMode] = useTema()
   const [mes, setMes] = useState(() => {
     const d = new Date()
     return new Date(d.getFullYear(), d.getMonth(), 1)
