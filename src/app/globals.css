@@ -3,14 +3,22 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Bricolage Grotesque', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
 
-  /* Formas menos "burbuja" */
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.625rem;
-  --radius-2xl: 0.875rem;
-  --shadow-sm: 0 1px 0 rgb(31 26 22 / 0.05);
+  /* Controles y tarjetas estilo iOS: esquinas suaves y proporciones equilibradas */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* Elevaciones iOS sutiles */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+  --shadow-xl: 0 20px 30px -4px rgba(0, 0, 0, 0.08), 0 8px 10px -4px rgba(0, 0, 0, 0.03);
 
   --color-white: #fffdf9;
 
@@ -116,17 +124,42 @@ h1, h2 { font-family: var(--font-display); letter-spacing: -0.02em; font-weight:
 .text-2xl.font-bold, .text-3xl.font-bold { font-family: var(--font-display); letter-spacing: -0.02em; }
 ::selection { background: #f6bfa8; color: #38130a; }
 
-/* Una sola animación con intención: el contenido sube suave al entrar */
+/* Animaciones y micro-interacciones estilo iOS */
 @keyframes nexo-subir {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-.min-h-screen > .mx-auto > * { animation: nexo-subir 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-.min-h-screen > .mx-auto > *:nth-child(2) { animation-delay: 0.04s; }
-.min-h-screen > .mx-auto > *:nth-child(3) { animation-delay: 0.08s; }
-.min-h-screen > .mx-auto > *:nth-child(4) { animation-delay: 0.12s; }
-.min-h-screen > .mx-auto > *:nth-child(5) { animation-delay: 0.16s; }
-.min-h-screen > .mx-auto > *:nth-child(6) { animation-delay: 0.2s; }
+
+.min-h-screen > .mx-auto > * { 
+  animation: nexo-subir 0.35s cubic-bezier(0.25, 1, 0.5, 1) both; 
+}
+.min-h-screen > .mx-auto > *:nth-child(2) { animation-delay: 0.03s; }
+.min-h-screen > .mx-auto > *:nth-child(3) { animation-delay: 0.06s; }
+.min-h-screen > .mx-auto > *:nth-child(4) { animation-delay: 0.09s; }
+.min-h-screen > .mx-auto > *:nth-child(5) { animation-delay: 0.12s; }
+.min-h-screen > .mx-auto > *:nth-child(6) { animation-delay: 0.15s; }
+
+/* Efecto Glassmorphism iOS nativo */
+.ios-glass {
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.ios-card {
+  border-radius: 1.25rem;
+  transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Toque háptico / feedback en botones estilo iOS */
+.ios-btn-tap {
+  transition: transform 0.15s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.15s ease;
+}
+.ios-btn-tap:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .min-h-screen > .mx-auto > * { animation: none; }
+  .ios-btn-tap:active { transform: none; }
 }

@@ -1053,132 +1053,134 @@ export default function AdminDashboard() {
                 action={emptyAction}
               />
             ) : (
-              <div className="md:hidden p-3 space-y-3">
-                {clientesVisibles.map((item: any) => (
-                  <ClienteMovil
-                    key={item.id}
-                    item={item}
-                    dark={darkMode}
-                    destino={item.usuario_id ? perfilesPorId[item.usuario_id] : null}
-                    copiado={copiedId === item.id}
-                    onEnviar={() => abrirEnviar(item)}
-                    onRenovar={() => setRenovarItem(item)}
-                    onCopiar={() => handleCopiarDatosCliente(item)}
-                    onEditar={() => { setEditingItem(item); setFormData(item); setIsModalOpen(true) }}
-                    onBorrar={() => handleDelete('cuentas_clientes', item.id)}
-                    onLiberar={() => handleLiberar(item)}
-                  />
-                ))}
-              </div>
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left text-sm min-w-[1100px]">
-                  <thead className={`${ui.thead} border-b text-xs font-semibold`}>
-                    <tr>
-                      <th className="px-4 py-3">Cliente</th>
-                      <th className="px-4 py-3">Correo y contraseña de la cuenta</th>
-                      <th className="px-4 py-3">Servicio</th>
-                      <th className="px-4 py-3">Perfil / PIN</th>
-                      <th className="px-4 py-3">Precio</th>
-                      <th className="px-4 py-3">Vencimiento</th>
-                      <th className="px-4 py-3">Estado</th>
-                      <th className="px-4 py-3">Enviada a</th>
-                      <th className="px-4 py-3 text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className={`divide-y ${ui.divide}`}>
-                    {clientesVisibles.map((item) => {
-                      const semaforo = getSemaforoStatus(item.fecha_vencimiento)
-                      const destino = item.usuario_id ? perfilesPorId[item.usuario_id] : null
-                      return (
-                        <tr key={item.id} className={`transition-colors ${ui.rowHover}`}>
-                          <td className="px-4 py-3.5 font-semibold">
-                            {item.nombre_completo || '-'}
-                            {item.correo && <div className={`text-[11px] font-normal ${ui.muted}`}>{item.correo}</div>}
-                          </td>
-                          <td className="px-4 py-3.5 font-mono text-xs">
-                            <span className={`font-semibold ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>{item.correo_cuenta || item.correo || '-'}</span>
-                            <br />
-                            <span className={ui.muted}>Pass: {item.contrasena_cuenta || item.contrasena || 'S/N'}</span>
-                          </td>
-                          <td className="px-4 py-3.5 font-semibold">{item.servicio || '-'}</td>
-                          <td className="px-4 py-3.5 font-mono text-xs">{item.perfil_asignado || '-'} <span className={ui.muted}>(PIN: {item.pin_perfil || 'S/N'})</span></td>
-                          <td className={`px-4 py-3.5 font-semibold whitespace-nowrap ${darkMode ? 'text-emerald-300' : 'text-emerald-700'}`}>${item.precio_suscripcion || 0} MXN</td>
-                          <td className="px-4 py-3.5 whitespace-nowrap">
-                            {formatearFecha(item.fecha_vencimiento)}
-                            <div className={`text-[11px] ${ui.muted}`}>{textoDias(semaforo.dias)}</div>
-                          </td>
-                          <td className="px-4 py-3.5">
-                            <Pill dark={darkMode} tone={semaforo.tone}>{semaforo.label}</Pill>
-                          </td>
-                          <td className="px-4 py-3.5">
-                            {item.usuario_id ? (
-                              <div className="space-y-1">
-                                <Pill dark={darkMode} tone="success">
-                                  <UserCheck size={12} />
-                                  {destino ? `${destino.nombre || 'Cliente'}${destino.cliente_id ? ` · @${destino.cliente_id}` : ''}` : 'Cliente no encontrado'}
-                                </Pill>
-                                {item.panel_url && <div><Pill dark={darkMode} tone="info"><Globe size={12} /> Con panel</Pill></div>}
-                              </div>
-                            ) : (
-                              <Pill dark={darkMode} tone="neutral">Sin enviar</Pill>
-                            )}
-                          </td>
-                          <td className="px-4 py-3.5">
-                            <div className="flex items-center justify-end gap-1 whitespace-nowrap">
-                              <button
-                                onClick={() => abrirEnviar(item)}
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 transition`}
-                                title="Enviar esta cuenta al panel de un cliente"
-                              >
-                                <Send size={14} /> {item.usuario_id ? 'Reenviar' : 'Enviar'}
-                              </button>
-                              <button
-                                onClick={() => setRenovarItem(item)}
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
-                                  darkMode ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20' : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
-                                }`}
-                                title="Renovar: suma días y registra el pago"
-                              >
-                                <RefreshCw size={14} /> Renovar
-                              </button>
-                              <a href={enlaceCobro(item)} target="_blank" rel="noopener noreferrer" className={ui.iconBtn} title="Cobrar por WhatsApp" aria-label="Cobrar por WhatsApp">
-                                <MessageCircle size={16} />
-                              </a>
-                              {semaforo.label === 'Vencida' && item.cuenta_madre_id && (
-                                <button
-                                  onClick={() => handleLiberar(item)}
-                                  className={`p-2 rounded-lg transition ${darkMode ? 'text-amber-300 hover:bg-amber-500/10' : 'text-amber-600 hover:bg-amber-50'}`}
-                                  title="Liberar perfil"
-                                  aria-label="Liberar perfil"
-                                >
-                                  <UserMinus size={16} />
-                                </button>
+              <>
+                <div className="md:hidden p-3 space-y-3">
+                  {clientesVisibles.map((item: any) => (
+                    <ClienteMovil
+                      key={item.id}
+                      item={item}
+                      dark={darkMode}
+                      destino={item.usuario_id ? perfilesPorId[item.usuario_id] : null}
+                      copiado={copiedId === item.id}
+                      onEnviar={() => abrirEnviar(item)}
+                      onRenovar={() => setRenovarItem(item)}
+                      onCopiar={() => handleCopiarDatosCliente(item)}
+                      onEditar={() => { setEditingItem(item); setFormData(item); setIsModalOpen(true) }}
+                      onBorrar={() => handleDelete('cuentas_clientes', item.id)}
+                      onLiberar={() => handleLiberar(item)}
+                    />
+                  ))}
+                </div>
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left text-sm min-w-[1100px]">
+                    <thead className={`${ui.thead} border-b text-xs font-semibold`}>
+                      <tr>
+                        <th className="px-4 py-3">Cliente</th>
+                        <th className="px-4 py-3">Correo y contraseña de la cuenta</th>
+                        <th className="px-4 py-3">Servicio</th>
+                        <th className="px-4 py-3">Perfil / PIN</th>
+                        <th className="px-4 py-3">Precio</th>
+                        <th className="px-4 py-3">Vencimiento</th>
+                        <th className="px-4 py-3">Estado</th>
+                        <th className="px-4 py-3">Enviada a</th>
+                        <th className="px-4 py-3 text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className={`divide-y ${ui.divide}`}>
+                      {clientesVisibles.map((item) => {
+                        const semaforo = getSemaforoStatus(item.fecha_vencimiento)
+                        const destino = item.usuario_id ? perfilesPorId[item.usuario_id] : null
+                        return (
+                          <tr key={item.id} className={`transition-colors ${ui.rowHover}`}>
+                            <td className="px-4 py-3.5 font-semibold">
+                              {item.nombre_completo || '-'}
+                              {item.correo && <div className={`text-[11px] font-normal ${ui.muted}`}>{item.correo}</div>}
+                            </td>
+                            <td className="px-4 py-3.5 font-mono text-xs">
+                              <span className={`font-semibold ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>{item.correo_cuenta || item.correo || '-'}</span>
+                              <br />
+                              <span className={ui.muted}>Pass: {item.contrasena_cuenta || item.contrasena || 'S/N'}</span>
+                            </td>
+                            <td className="px-4 py-3.5 font-semibold">{item.servicio || '-'}</td>
+                            <td className="px-4 py-3.5 font-mono text-xs">{item.perfil_asignado || '-'} <span className={ui.muted}>(PIN: {item.pin_perfil || 'S/N'})</span></td>
+                            <td className={`px-4 py-3.5 font-semibold whitespace-nowrap ${darkMode ? 'text-emerald-300' : 'text-emerald-700'}`}>${item.precio_suscripcion || 0} MXN</td>
+                            <td className="px-4 py-3.5 whitespace-nowrap">
+                              {formatearFecha(item.fecha_vencimiento)}
+                              <div className={`text-[11px] ${ui.muted}`}>{textoDias(semaforo.dias)}</div>
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <Pill dark={darkMode} tone={semaforo.tone}>{semaforo.label}</Pill>
+                            </td>
+                            <td className="px-4 py-3.5">
+                              {item.usuario_id ? (
+                                <div className="space-y-1">
+                                  <Pill dark={darkMode} tone="success">
+                                    <UserCheck size={12} />
+                                    {destino ? `${destino.nombre || 'Cliente'}${destino.cliente_id ? ` · @${destino.cliente_id}` : ''}` : 'Cliente no encontrado'}
+                                  </Pill>
+                                  {item.panel_url && <div><Pill dark={darkMode} tone="info"><Globe size={12} /> Con panel</Pill></div>}
+                                </div>
+                              ) : (
+                                <Pill dark={darkMode} tone="neutral">Sin enviar</Pill>
                               )}
-                              <button
-                                onClick={() => handleCopiarDatosCliente(item)}
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
-                                  copiedId === item.id
-                                    ? toneClasses(darkMode, 'success')
-                                    : (darkMode ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20' : 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100')
-                                }`}
-                              >
-                                {copiedId === item.id ? <Check size={14} /> : <Copy size={14} />}
-                                {copiedId === item.id ? '¡Copiado!' : 'Copiar'}
-                              </button>
-                              <button onClick={() => { setEditingItem(item); setFormData(item); setIsModalOpen(true); }} className={ui.iconBtn} title="Editar" aria-label="Editar">
-                                <Pencil size={16} />
-                              </button>
-                              <button onClick={() => handleDelete('cuentas_clientes', item.id)} className={`p-2 rounded-lg transition ${darkMode ? 'text-rose-300 hover:bg-rose-500/10' : 'text-rose-600 hover:bg-rose-50'}`} title="Eliminar" aria-label="Eliminar">
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <div className="flex items-center justify-end gap-1 whitespace-nowrap">
+                                <button
+                                  onClick={() => abrirEnviar(item)}
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 transition`}
+                                  title="Enviar esta cuenta al panel de un cliente"
+                                >
+                                  <Send size={14} /> {item.usuario_id ? 'Reenviar' : 'Enviar'}
+                                </button>
+                                <button
+                                  onClick={() => setRenovarItem(item)}
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                                    darkMode ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20' : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                                  }`}
+                                  title="Renovar: suma días y registra el pago"
+                                >
+                                  <RefreshCw size={14} /> Renovar
+                                </button>
+                                <a href={enlaceCobro(item)} target="_blank" rel="noopener noreferrer" className={ui.iconBtn} title="Cobrar por WhatsApp" aria-label="Cobrar por WhatsApp">
+                                  <MessageCircle size={16} />
+                                </a>
+                                {semaforo.label === 'Vencida' && item.cuenta_madre_id && (
+                                  <button
+                                    onClick={() => handleLiberar(item)}
+                                    className={`p-2 rounded-lg transition ${darkMode ? 'text-amber-300 hover:bg-amber-500/10' : 'text-amber-600 hover:bg-amber-50'}`}
+                                    title="Liberar perfil"
+                                    aria-label="Liberar perfil"
+                                  >
+                                    <UserMinus size={16} />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleCopiarDatosCliente(item)}
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                                    copiedId === item.id
+                                      ? toneClasses(darkMode, 'success')
+                                      : (darkMode ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20' : 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100')
+                                  }`}
+                                >
+                                  {copiedId === item.id ? <Check size={14} /> : <Copy size={14} />}
+                                  {copiedId === item.id ? '¡Copiado!' : 'Copiar'}
+                                </button>
+                                <button onClick={() => { setEditingItem(item); setFormData(item); setIsModalOpen(true); }} className={ui.iconBtn} title="Editar" aria-label="Editar">
+                                  <Pencil size={16} />
+                                </button>
+                                <button onClick={() => handleDelete('cuentas_clientes', item.id)} className={`p-2 rounded-lg transition ${darkMode ? 'text-rose-300 hover:bg-rose-500/10' : 'text-rose-600 hover:bg-rose-50'}`} title="Eliminar" aria-label="Eliminar">
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -1195,21 +1197,22 @@ export default function AdminDashboard() {
                 action={emptyAction}
               />
             ) : (
-              <div className="md:hidden p-3 space-y-3">
-                {madresVisibles.map((item: any) => (
-                  <MadreMovil
-                    key={item.id}
-                    item={item}
-                    dark={darkMode}
-                    clientes={cuentasClientes.filter((c) => String(c.cuenta_madre_id) === String(item.id))}
-                    onEditar={() => { setEditingItem(item); setFormData(item); setIsModalOpen(true) }}
-                    onMover={() => setMoverMadre(item)}
-                    onBorrar={() => handleDelete('cuentas_madre', item.id)}
-                  />
-                ))}
-              </div>
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left text-sm min-w-[900px]">
+              <>
+                <div className="md:hidden p-3 space-y-3">
+                  {madresVisibles.map((item: any) => (
+                    <MadreMovil
+                      key={item.id}
+                      item={item}
+                      dark={darkMode}
+                      clientes={cuentasClientes.filter((c) => String(c.cuenta_madre_id) === String(item.id))}
+                      onEditar={() => { setEditingItem(item); setFormData(item); setIsModalOpen(true) }}
+                      onMover={() => setMoverMadre(item)}
+                      onBorrar={() => handleDelete('cuentas_madre', item.id)}
+                    />
+                  ))}
+                </div>
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left text-sm min-w-[900px]">
                   <thead className={`${ui.thead} border-b text-xs font-semibold`}>
                     <tr>
                       <th className="px-4 py-3">Proveedor</th>
@@ -1308,7 +1311,8 @@ export default function AdminDashboard() {
                   </tbody>
                 </table>
               </div>
-            )}
+            </>
+          )}
           </div>
         )}
 

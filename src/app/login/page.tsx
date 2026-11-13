@@ -111,10 +111,10 @@ export default function LoginPage() {
     }
   }
 
-  const inputClass = `w-full pl-11 py-3 rounded-xl text-sm border outline-none transition focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 ${
+  const inputClass = `w-full pl-11 py-3 rounded-2xl text-sm border outline-none transition duration-150 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 ${
     isDarkMode
-      ? 'bg-slate-900 border-slate-700 text-slate-100 placeholder-slate-500'
-      : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+      ? 'bg-slate-900/90 border-slate-700 text-slate-100 placeholder-slate-500'
+      : 'bg-white/95 border-slate-300 text-slate-900 placeholder-slate-400'
   }`
 
   const iconClass = `absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`
@@ -132,26 +132,26 @@ export default function LoginPage() {
       <button 
         type="button"
         onClick={() => setIsDarkMode(!isDarkMode)}
-        className={`absolute top-5 right-5 px-4 py-2 text-sm font-medium rounded-full border flex items-center gap-2 transition shadow-sm ${
+        className={`absolute top-5 right-5 px-4 py-2 text-sm font-medium rounded-full border flex items-center gap-2 transition active:scale-[0.95] shadow-xs backdrop-blur-md ${
           isDarkMode
-            ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
-            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+            ? 'bg-slate-800/80 border-slate-700 text-slate-200 hover:bg-slate-700'
+            : 'bg-white/80 border-slate-200 text-slate-700 hover:bg-slate-50'
         }`}
       >
         {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
         {isDarkMode ? 'Modo claro' : 'Modo oscuro'}
       </button>
 
-      {/* Tarjeta principal */}
-      <div className={`relative w-full max-w-md p-8 rounded-2xl border shadow-xl transition-colors ${
+      {/* Tarjeta principal estilo iOS */}
+      <div className={`relative w-full max-w-md p-8 rounded-3xl border shadow-xl backdrop-blur-2xl transition-all ${
         isDarkMode 
-          ? 'bg-slate-800/80 border-slate-700 shadow-black/30' 
-          : 'bg-white border-slate-200 shadow-slate-300/50'
+          ? 'bg-slate-800/85 border-slate-700/80 shadow-black/40' 
+          : 'bg-white/90 border-slate-200/80 shadow-slate-300/40'
       }`}>
         
         {/* Header con icono de escudo */}
         <div className="flex flex-col items-center mb-6 text-center">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-gradient-to-br from-indigo-600 to-blue-600 text-white shadow-lg shadow-indigo-600/30">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-600/30">
             <ShieldCheck size={28} />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">
@@ -166,7 +166,7 @@ export default function LoginPage() {
         {errorMsg && (
           <div
             role="alert"
-            className={`mb-5 p-3 rounded-xl border text-sm flex items-start gap-2 ${
+            className={`mb-5 p-3 rounded-2xl border text-sm flex items-start gap-2.5 animate-in fade-in duration-200 ${
               isDarkMode ? 'bg-rose-500/10 border-rose-500/30 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-700'
             }`}
           >
@@ -231,7 +231,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-indigo-600/25 flex items-center justify-center gap-2 transition active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+            className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white text-sm font-semibold rounded-2xl shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 transition active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed mt-2"
           >
             {loading ? (
               <><Loader2 size={18} className="animate-spin" /> Cargando...</>
